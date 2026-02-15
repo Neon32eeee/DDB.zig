@@ -1,0 +1,94 @@
+const std = @import("std");
+const Types = @import("Types.zig");
+
+pub const Table = struct {
+    rows: std.ArrayList(Types.Element),
+    allocator: std.mem.Allocator,
+    tname: []const u8,
+    data_buffer: ?[]u8 = null,
+
+    pub fn init(
+        tmane: []const u8,
+        allocator: std.mem.Allocator,
+    ) Table {
+        return .{
+            .rows = std.ArrayList(Types.Element){},
+            .allocator = allocator,
+            .tname = tmane,
+        };
+    }
+
+    pub fn append(self: *Table, row: Types.Element) !void {
+        if (!std.mem.eql(u8, row.tmane, self.tname)) {
+            std.debug.print("\n{s}\n", .{self.tname});
+            return error.InvalidType;
+        }
+        try self.rows.append(self.allocator, row);
+    }
+
+    pub fn remove(self: *@This(), index: usize) void {
+        self.rows.items[index].deinit();
+        _ = self.rows.orderedRemove(index);
+    }
+
+    pub fn get(self: Table, idx: usize) ?Types.Element {
+        if (self.rows.items.len <= idx) return null;
+        return self.rows.items[idx];
+    }
+
+    pub fn iterator(self: *@This()) Types.TableIterator {
+        return Types.TableIterator(.{ .data = &self.rows, .index = 0 });
+    }
+
+    pub fn deinit(self: *@This()) void {
+        for (self.rows.items) |*element| {
+            element.deinit();
+        }
+        self.rows.deinit(self.allocator);
+
+        if (self.data_buffer) |b| self.allocator.free(b);
+    }
+};
+
+test "Add row" {
+    const User = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var tb = Table.init(User, allocator);
+    defer tb.deinit();
+
+    const user = User{ .id = 0, .name = "Jon" };
+
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+
+    try tb.append(Euser);
+}
+
+test "Get index row" {
+    const User = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var tb = Table.init(User, allocator);
+    defer tb.deinit();
+
+    const user = User{ .id = 0, .name = "Jon" };
+
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+
+    try tb.append(Euser);
+
+    const get = tb.get(0) orelse unreachable;
+    std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getInt("id").?, get.getStr("name").? });
+}
