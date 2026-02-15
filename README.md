@@ -1,15 +1,15 @@
 # DDB
-## О прэкте
+## About
 
-DDB - это билиеотека предостовляюшея базовый набор для упровления Базой Данных.
+DDB is a library providing a basic set of tools for managing a database.
 
-Требывания:
-- Версия zig: `0.15.1`
-- ОС:
+Requirements:
+- Zig version: `0.15.1`
+- OS:
   - Linux
-  - Mac Os
-  
-Пример:
+  - macOS
+
+Example:
 ```zig
 const std = @import("std");
 const ddb = @import("ddb");
@@ -40,14 +40,14 @@ pub fn main() !void {
 }
 ```
 
-## Установка
+## Installation
 
-main ветка
+main branch
 ```
 zig fetch --save https://github.com/Neon32eeee/DDB.zig/archive/refs/heads/main.tar.gz
 ```
 
-buld.zig:
+build.zig:
 
 ```zig
 const std = @import("std");
@@ -74,4 +74,3 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 }
 ```
-
