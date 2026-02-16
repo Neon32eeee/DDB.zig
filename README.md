@@ -75,6 +75,18 @@ pub fn build(b: *std.Build) void {
 }
 ```
 
+## Coomand
+
+1. Run benchmark
+```
+zig build benchmark
+```
+
+2. Run main
+```
+zig build run
+```
+
 ## More
 
 more details at [Wiki](https://github.com/Neon32eeee/DDB.zig/wiki)
