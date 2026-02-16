@@ -4,25 +4,21 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    // МОДУЛЬ (библиотека)
     const mod = b.addModule("DDB", .{
         .root_source_file = b.path("src/root.zig"),
         .target = target,
         .optimize = optimize,
     });
 
-    // СТАТИЧЕСКАЯ БИБЛИОТЕКА (артефакт)
     const lib = b.addLibrary(.{
         .name = "ddb",
         .linkage = .static,
         .root_module = mod,
     });
 
-    // DEFAULT шаг: собираем только библиотеку
     const default_step = b.step("default", "Build library");
     default_step.dependOn(&lib.step);
 
-    // EXECUTABLE (run)
     const exe = b.addExecutable(.{
         .name = "DDB",
         .root_module = b.createModule(.{
@@ -35,7 +31,6 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    // RUN step
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
 
@@ -46,7 +41,6 @@ pub fn build(b: *std.Build) void {
         run_cmd.addArgs(args);
     }
 
-    // TESTS
     const mod_tests = b.addTest(.{ .root_module = mod });
     const run_mod_tests = b.addRunArtifact(mod_tests);
 
