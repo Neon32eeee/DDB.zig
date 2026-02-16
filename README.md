@@ -77,4 +77,4 @@ pub fn build(b: *std.Build) void {
 
 ## More
 
-больше подробностей на [Wiki](https://github.com/Neon32eeee/DDB.zig/wiki)
+more details at [Wiki](https://github.com/Neon32eeee/DDB.zig/wiki)
