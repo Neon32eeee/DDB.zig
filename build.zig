@@ -34,8 +34,25 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
 
+    const benchmark = b.addExecutable(.{
+        .name = "benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/benchmark.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "ddb", .module = mod },
+            },
+        }),
+    });
+
+    const benchmark_step = b.step("benchmark", "benchmark the app");
+    const benchmark_cmd = b.addRunArtifact(benchmark);
+
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
+    benchmark_step.dependOn(&benchmark_cmd.step);
+    benchmark_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
         run_cmd.addArgs(args);
