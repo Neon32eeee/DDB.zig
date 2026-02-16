@@ -8,7 +8,7 @@ pub const FieldType = union(enum) {
 };
 
 pub const Element = struct {
-    tmane: []const u8,
+    tname: []const u8,
     field: std.StringHashMap(FieldType),
 
     pub fn get(self: @This(), key: []const u8) ?FieldType {

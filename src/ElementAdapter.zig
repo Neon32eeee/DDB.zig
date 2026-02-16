@@ -32,7 +32,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         }
     }
 
-    return Types.Element{ .tmane = tname, .field = fields };
+    return Types.Element{ .tname = tname, .field = fields };
 }
 
 test "to element" {
