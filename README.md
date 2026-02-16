@@ -74,3 +74,7 @@ pub fn build(b: *std.Build) void {
     b.installArtifact(exe);
 }
 ```
+
+## More
+
+больше подробностей на [Wiki](https://github.com/Neon32eeee/DDB.zig/wiki)
