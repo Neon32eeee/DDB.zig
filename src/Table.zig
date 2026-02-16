@@ -8,13 +8,13 @@ pub const Table = struct {
     data_buffer: ?[]u8 = null,
 
     pub fn init(
-        tmane: []const u8,
+        tname: []const u8,
         allocator: std.mem.Allocator,
     ) Table {
         return .{
             .rows = std.ArrayList(Types.Element){},
             .allocator = allocator,
-            .tname = tmane,
+            .tname = tname,
         };
     }
 
@@ -60,7 +60,7 @@ test "Add row" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(User, allocator);
+    var tb = Table.init(@typeName(User), allocator);
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "Jon" };
@@ -80,7 +80,7 @@ test "Get index row" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(User, allocator);
+    var tb = Table.init(@typeName(User), allocator);
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "Jon" };
