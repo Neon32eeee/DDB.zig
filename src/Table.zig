@@ -19,7 +19,7 @@ pub const Table = struct {
     }
 
     pub fn append(self: *Table, row: Types.Element) !void {
-        if (!std.mem.eql(u8, row.tmane, self.tname)) {
+        if (!std.mem.eql(u8, row.tname, self.tname)) {
             std.debug.print("\n{s}\n", .{self.tname});
             return error.InvalidType;
         }
