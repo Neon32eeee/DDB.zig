@@ -25,6 +25,8 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
             try fileds.put(name, Types.FiledType{ .str = value });
         } else if (filed.type == bool) {
             try fileds.put(name, Types.FiledType{ .bool = value });
+        } else if (filed.type == f64) {
+            try fileds.put(name, Types.FiledType{ .float = value });
         } else {
             return error.InvalidType;
         }

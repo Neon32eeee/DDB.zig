@@ -4,6 +4,7 @@ pub const FiledType = union(enum) {
     int: i32,
     str: []const u8,
     bool: bool,
+    float: f64,
 };
 
 pub const Element = struct {
@@ -20,6 +21,7 @@ pub const Element = struct {
             .int => if (@TypeOf(value.int) == T) value.int else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
+            .float => if (@TypeOf(value.float) == T) value.float else null,
         };
     }
 
@@ -47,11 +49,20 @@ pub const Element = struct {
         };
     }
 
+    pub fn getFLoat(self: @This(), key: []const u8) ?f64 {
+        const value = self.filed.get(key) orelse return null;
+        return switch (value) {
+            .float => value.float,
+            else => null,
+        };
+    }
+
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         const ft: FiledType = switch (T) {
             i32 => .{ .int = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
+            f64 => .{ .float = value },
             else => return error.UnsupportedType,
         };
         try self.filed.put(key, ft);
@@ -67,6 +78,10 @@ pub const Element = struct {
 
     pub fn setBool(self: *@This(), key: []const u8, value: bool) !void {
         try self.filed.put(key, .{ .bool = value });
+    }
+
+    pub fn setFloat(self: *@This(), key: []const u8, value: f64) !void {
+        try self.filed.put(key, .{ .float = value });
     }
 
     pub fn save(self: @This(), writer: *std.fs.File.Writer) !void {
@@ -95,6 +110,10 @@ pub const Element = struct {
                 .bool => {
                     try w.writeByte(2);
                     try w.writeByte(@intFromBool(v.bool));
+                },
+                .float => {
+                    try w.writeByte(3);
+                    try w.writeInt(u64, @bitCast(v.float), .little);
                 },
             }
 
@@ -144,6 +163,12 @@ pub const Element = struct {
                     const bool_b = try r.take(1);
                     const b = bool_b[0] != 0;
                     try self.filed.put(stored_key, .{ .bool = b });
+                },
+                3 => {
+                    // float
+                    const int = try r.takeInt(u64, .little);
+                    const val: f64 = @bitCast(int);
+                    try self.filed.put(stored_key, .{ .float = val });
                 },
                 else => return error.InvalidFormat,
             }
@@ -198,6 +223,8 @@ test "Element" {
             try HM.put(name, FiledType{ .str = ptr });
         } else if (f.type == bool) {
             try HM.put(name, FiledType{ .bool = ptr });
+        } else if (f.type == f64) {
+            try HM.put(name, FiledType{ .float = ptr });
         } else {
             return error.InvalidType;
         }
