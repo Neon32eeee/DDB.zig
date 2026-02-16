@@ -12,27 +12,27 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
 
     const tname = @typeName(T);
 
-    var fileds = std.StringHashMap(Types.FiledType).init(allocator);
+    var fields = std.StringHashMap(Types.FieldType).init(allocator);
     const info = @typeInfo(T);
 
-    inline for (info.@"struct".fields) |filed| {
-        const name = filed.name;
+    inline for (info.@"struct".fields) |field| {
+        const name = field.name;
         const value = @field(a, name);
 
-        if (filed.type == i32) {
-            try fileds.put(name, Types.FiledType{ .int = value });
-        } else if (filed.type == []const u8) {
-            try fileds.put(name, Types.FiledType{ .str = value });
-        } else if (filed.type == bool) {
-            try fileds.put(name, Types.FiledType{ .bool = value });
-        } else if (filed.type == f64) {
-            try fileds.put(name, Types.FiledType{ .float = value });
+        if (field.type == i32) {
+            try fields.put(name, Types.FieldType{ .int = value });
+        } else if (field.type == []const u8) {
+            try fields.put(name, Types.FieldType{ .str = value });
+        } else if (field.type == bool) {
+            try fields.put(name, Types.FieldType{ .bool = value });
+        } else if (field.type == f64) {
+            try fields.put(name, Types.FieldType{ .float = value });
         } else {
             return error.InvalidType;
         }
     }
 
-    return Types.Element{ .tmane = tname, .filed = fileds };
+    return Types.Element{ .tmane = tname, .field = fields };
 }
 
 test "to element" {

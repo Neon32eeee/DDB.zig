@@ -136,7 +136,7 @@ pub fn DB() type {
                 var treader = tfile.reader(tbuff[0..]);
 
                 for (0..count_row) |_| {
-                    var element = Types.Element{ .filed = std.StringHashMap(Types.FiledType).init(db.allocator), .tmane = tname };
+                    var element = Types.Element{ .field = std.StringHashMap(Types.FieldType).init(db.allocator), .tmane = tname };
 
                     try element.load(&treader);
 

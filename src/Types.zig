@@ -1,6 +1,6 @@
 const std = @import("std");
 
-pub const FiledType = union(enum) {
+pub const FieldType = union(enum) {
     int: i32,
     str: []const u8,
     bool: bool,
@@ -9,14 +9,14 @@ pub const FiledType = union(enum) {
 
 pub const Element = struct {
     tmane: []const u8,
-    filed: std.StringHashMap(FiledType),
+    field: std.StringHashMap(FieldType),
 
-    pub fn get(self: @This(), key: []const u8) ?FiledType {
-        return self.filed.get(key) orelse null;
+    pub fn get(self: @This(), key: []const u8) ?FieldType {
+        return self.field.get(key) orelse null;
     }
 
     pub fn getAs(self: @This(), comptime T: type, key: []const u8) ?T {
-        const value = self.filed.get(key) orelse return null;
+        const value = self.field.get(key) orelse return null;
         return switch (value) {
             .int => if (@TypeOf(value.int) == T) value.int else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
@@ -26,7 +26,7 @@ pub const Element = struct {
     }
 
     pub fn getInt(self: @This(), key: []const u8) ?i32 {
-        const value = self.filed.get(key) orelse return null;
+        const value = self.field.get(key) orelse return null;
         return switch (value) {
             .int => value.int,
             else => null,
@@ -34,7 +34,7 @@ pub const Element = struct {
     }
 
     pub fn getStr(self: @This(), key: []const u8) ?[]const u8 {
-        const value = self.filed.get(key) orelse return null;
+        const value = self.field.get(key) orelse return null;
         return switch (value) {
             .str => value.str,
             else => null,
@@ -42,7 +42,7 @@ pub const Element = struct {
     }
 
     pub fn getBool(self: @This(), key: []const u8) ?bool {
-        const value = self.filed.get(key) orelse return null;
+        const value = self.field.get(key) orelse return null;
         return switch (value) {
             .bool => value.bool,
             else => null,
@@ -50,7 +50,7 @@ pub const Element = struct {
     }
 
     pub fn getFLoat(self: @This(), key: []const u8) ?f64 {
-        const value = self.filed.get(key) orelse return null;
+        const value = self.field.get(key) orelse return null;
         return switch (value) {
             .float => value.float,
             else => null,
@@ -58,36 +58,36 @@ pub const Element = struct {
     }
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
-        const ft: FiledType = switch (T) {
+        const ft: FieldType = switch (T) {
             i32 => .{ .int = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
             else => return error.UnsupportedType,
         };
-        try self.filed.put(key, ft);
+        try self.field.put(key, ft);
     }
 
     pub fn setInt(self: *@This(), key: []const u8, value: i32) !void {
-        try self.filed.put(key, .{ .int = value });
+        try self.field.put(key, .{ .int = value });
     }
 
     pub fn setStr(self: *@This(), key: []const u8, value: []const u8) !void {
-        try self.filed.put(key, .{ .str = value });
+        try self.field.put(key, .{ .str = value });
     }
 
     pub fn setBool(self: *@This(), key: []const u8, value: bool) !void {
-        try self.filed.put(key, .{ .bool = value });
+        try self.field.put(key, .{ .bool = value });
     }
 
     pub fn setFloat(self: *@This(), key: []const u8, value: f64) !void {
-        try self.filed.put(key, .{ .float = value });
+        try self.field.put(key, .{ .float = value });
     }
 
     pub fn save(self: @This(), writer: *std.fs.File.Writer) !void {
         var w = &writer.interface;
 
-        var iterator = self.filed.iterator();
+        var iterator = self.field.iterator();
 
         var next = iterator.next();
 
@@ -147,7 +147,7 @@ pub const Element = struct {
                 0 => {
                     // int
                     const val = try r.takeInt(i32, .little);
-                    try self.filed.put(stored_key, .{ .int = val });
+                    try self.field.put(stored_key, .{ .int = val });
                 },
                 1 => {
                     // str
@@ -156,19 +156,19 @@ pub const Element = struct {
 
                     const stored_str: []const u8 = str_slice;
 
-                    try self.filed.put(stored_key, .{ .str = stored_str });
+                    try self.field.put(stored_key, .{ .str = stored_str });
                 },
                 2 => {
                     // bool
                     const bool_b = try r.take(1);
                     const b = bool_b[0] != 0;
-                    try self.filed.put(stored_key, .{ .bool = b });
+                    try self.field.put(stored_key, .{ .bool = b });
                 },
                 3 => {
                     // float
                     const int = try r.takeInt(u64, .little);
                     const val: f64 = @bitCast(int);
-                    try self.filed.put(stored_key, .{ .float = val });
+                    try self.field.put(stored_key, .{ .float = val });
                 },
                 else => return error.InvalidFormat,
             }
@@ -182,7 +182,7 @@ pub const Element = struct {
     }
 
     pub fn deinit(self: *@This()) void {
-        self.filed.deinit();
+        self.field.deinit();
     }
 };
 
@@ -208,23 +208,23 @@ test "Element" {
 
     const allocator = std.testing.allocator;
 
-    var HM = std.StringHashMap(FiledType).init(allocator);
+    var HM = std.StringHashMap(FieldType).init(allocator);
     defer HM.deinit();
 
-    const filed = @typeInfo(@TypeOf(user));
+    const field = @typeInfo(@TypeOf(user));
 
-    inline for (filed.@"struct".fields) |f| {
+    inline for (field.@"struct".fields) |f| {
         const name = f.name;
         const ptr = @field(user, name);
 
         if (f.type == i32) {
-            try HM.put(name, FiledType{ .int = ptr });
+            try HM.put(name, FieldType{ .int = ptr });
         } else if (f.type == []const u8) {
-            try HM.put(name, FiledType{ .str = ptr });
+            try HM.put(name, FieldType{ .str = ptr });
         } else if (f.type == bool) {
-            try HM.put(name, FiledType{ .bool = ptr });
+            try HM.put(name, FieldType{ .bool = ptr });
         } else if (f.type == f64) {
-            try HM.put(name, FiledType{ .float = ptr });
+            try HM.put(name, FieldType{ .float = ptr });
         } else {
             return error.InvalidType;
         }
@@ -232,7 +232,7 @@ test "Element" {
 
     var e = Element{
         .tmane = @typeName(User),
-        .filed = HM,
+        .field = HM,
     };
 
     try e.setAs([]const u8, "name", "JDH");
@@ -276,7 +276,7 @@ test "Element load" {
 
     const allocator = std.testing.allocator;
 
-    var Euser = Element{ .tmane = @typeName(User), .filed = std.StringHashMap(FiledType).init(allocator) };
+    var Euser = Element{ .tmane = @typeName(User), .field = std.StringHashMap(FieldType).init(allocator) };
     defer Euser.deinit();
 
     try Euser.load(
