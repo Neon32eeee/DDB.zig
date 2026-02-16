@@ -34,7 +34,7 @@ pub fn main() !void {
     try db.createTable("players", Player);
 
     const Tplayers = db.getTable("players").?;
-    try Tplayers.append(Ep2);    
+    try Tplayers.append(ep);    
 
     try db.save();
 }
