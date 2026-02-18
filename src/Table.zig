@@ -32,12 +32,21 @@ pub const Table = struct {
     }
 
     pub fn get(self: Table, idx: usize) ?Types.Element {
-        if (self.rows.items.len <= idx) return null;
+        if (self.len() <= idx) return null;
         return self.rows.items[idx];
     }
 
     pub fn iterator(self: *@This()) Types.TableIterator {
         return Types.TableIterator(.{ .data = &self.rows, .index = 0 });
+    }
+
+    pub fn len(self: @This()) usize {
+        return self.rows.items.len;
+    }
+
+    pub fn clear(self: *@This()) void {
+        if (self.len() == 0) return;
+        self.rows.clearAndFree(self.allocator);
     }
 
     pub fn deinit(self: *@This()) void {
@@ -91,4 +100,28 @@ test "Get index row" {
 
     const get = tb.get(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getInt("id").?, get.getStr("name").? });
+}
+
+test "Clear Table" {
+    const User = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var tb = Table.init(@typeName(User), allocator);
+    defer tb.deinit();
+
+    const user = User{ .id = 0, .name = "Jon" };
+
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+
+    try tb.append(Euser);
+
+    tb.clear();
+
+    try tb.append(Euser);
 }
