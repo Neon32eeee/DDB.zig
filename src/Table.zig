@@ -26,7 +26,7 @@ pub const Table = struct {
         try self.rows.append(self.allocator, row);
     }
 
-    pub fn remove(self: *@This(), index: usize) void {
+    pub fn remove(self: *@This(), index: usize) !void {
         if (index >= self.len()) return error.InvalidIndex;
         self.rows.items[index].deinit();
         _ = self.rows.orderedRemove(index);
