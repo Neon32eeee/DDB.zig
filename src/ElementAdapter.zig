@@ -50,10 +50,10 @@ test "to element" {
     var Euser = try toElement(user, allocator);
     defer Euser.deinit();
 
-    if (Euser.getInt("id") != 0) {
+    if (Euser.getAs(i32, "id") != 0) {
         return error.InvalidID;
     }
-    if (!std.mem.eql(u8, Euser.getStr("name").?, "Jon")) {
+    if (!std.mem.eql(u8, Euser.getAs([]const u8, "name").?, "Jon")) {
         return error.InvalidName;
     }
 }

@@ -239,5 +239,5 @@ test "Load DB" {
     const Eusers = Tusers.get(0).?;
     const Eusers2 = Tusers.get(1).?;
 
-    std.debug.print("\n{s}, {s}\n", .{ Eusers.getStr("name").?, Eusers2.getStr("name").? });
+    std.debug.print("\n{s}, {s}\n", .{ Eusers.getAs([]const u8, "name").?, Eusers2.getAs([]const u8, "name").? });
 }

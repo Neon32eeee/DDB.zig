@@ -100,7 +100,7 @@ test "Get index row" {
     try tb.append(Euser);
 
     const get = tb.get(0) orelse unreachable;
-    std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getInt("id").?, get.getStr("name").? });
+    std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
 }
 
 test "Clear Table" {

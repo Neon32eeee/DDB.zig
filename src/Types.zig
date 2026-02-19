@@ -25,39 +25,13 @@ pub const Element = struct {
         };
     }
 
-    pub fn getInt(self: @This(), key: []const u8) ?i32 {
-        const value = self.field.get(key) orelse return null;
-        return switch (value) {
-            .int => value.int,
-            else => null,
-        };
-    }
-
-    pub fn getStr(self: @This(), key: []const u8) ?[]const u8 {
-        const value = self.field.get(key) orelse return null;
-        return switch (value) {
-            .str => value.str,
-            else => null,
-        };
-    }
-
-    pub fn getBool(self: @This(), key: []const u8) ?bool {
-        const value = self.field.get(key) orelse return null;
-        return switch (value) {
-            .bool => value.bool,
-            else => null,
-        };
-    }
-
-    pub fn getFLoat(self: @This(), key: []const u8) ?f64 {
-        const value = self.field.get(key) orelse return null;
-        return switch (value) {
-            .float => value.float,
-            else => null,
-        };
+    pub fn set(self: *@This(), key: []const u8, value: FieldType) !void {
+        if (!self.field.contains(key)) return error.NotFindField;
+        try self.field.put(key, value);
     }
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
+        if (!self.field.contains(key)) return error.NotFindField;
         const ft: FieldType = switch (T) {
             i32 => .{ .int = value },
             []const u8 => .{ .str = value },
@@ -66,22 +40,6 @@ pub const Element = struct {
             else => return error.UnsupportedType,
         };
         try self.field.put(key, ft);
-    }
-
-    pub fn setInt(self: *@This(), key: []const u8, value: i32) !void {
-        try self.field.put(key, .{ .int = value });
-    }
-
-    pub fn setStr(self: *@This(), key: []const u8, value: []const u8) !void {
-        try self.field.put(key, .{ .str = value });
-    }
-
-    pub fn setBool(self: *@This(), key: []const u8, value: bool) !void {
-        try self.field.put(key, .{ .bool = value });
-    }
-
-    pub fn setFloat(self: *@This(), key: []const u8, value: f64) !void {
-        try self.field.put(key, .{ .float = value });
     }
 
     pub fn save(self: @This(), writer: *std.fs.File.Writer) !void {
@@ -231,7 +189,7 @@ test "Element" {
     }
 
     var e = Element{
-        .tmane = @typeName(User),
+        .tname = @typeName(User),
         .field = HM,
     };
 
@@ -276,18 +234,21 @@ test "Element load" {
 
     const allocator = std.testing.allocator;
 
-    var Euser = Element{ .tmane = @typeName(User), .field = std.StringHashMap(FieldType).init(allocator) };
+    var Euser = Element{
+        .tname = @typeName(User),
+        .field = std.StringHashMap(FieldType).init(allocator),
+    };
     defer Euser.deinit();
 
     try Euser.load(
         &reader,
     );
 
-    if (Euser.getStr("name") == null) {
+    if (Euser.getAs([]const u8, "name") == null) {
         return error.InvalidLoad;
     }
 
-    std.debug.print("\n{s}\n", .{Euser.getStr("name").?});
+    std.debug.print("\n{s}\n", .{Euser.getAs([]const u8, "name").?});
 }
 
 test "Next TableIterator" {
@@ -314,7 +275,7 @@ test "Next TableIterator" {
     var it = TableIterator{ .data = &list, .index = 0 };
 
     while (it.next()) |*e| {
-        std.debug.print("\n{s}", .{e.getStr("name").?});
+        std.debug.print("\n{s}", .{e.getAs([]const u8, "name").?});
         @constCast(e).deinit();
     }
     std.debug.print("\n", .{});
