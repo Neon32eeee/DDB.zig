@@ -27,13 +27,14 @@ pub const Table = struct {
     }
 
     pub fn remove(self: *@This(), index: usize) void {
+        if (index >= self.len()) return error.InvalidIndex;
         self.rows.items[index].deinit();
         _ = self.rows.orderedRemove(index);
     }
 
-    pub fn get(self: Table, idx: usize) ?Types.Element {
-        if (self.len() <= idx) return null;
-        return self.rows.items[idx];
+    pub fn get(self: Table, index: usize) ?Types.Element {
+        if (self.len() <= index) return null;
+        return self.rows.items[index];
     }
 
     pub fn iterator(self: *@This()) Types.TableIterator {
