@@ -70,7 +70,13 @@ pub fn DB() type {
                 try w.writeAll(v.tname);
                 try w.writeInt(usize, @intCast(v.rows.items.len), .little);
 
-                var table_file = try std.fs.cwd().createFile(k, .{});
+                const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
+                defer db.allocator.free(tdir_name);
+
+                var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
+                defer tdir.close();
+
+                var table_file = try tdir.createFile(k, .{});
                 defer table_file.close();
 
                 const tbuff = try db.allocator.alloc(u8, 8);
@@ -121,7 +127,13 @@ pub fn DB() type {
 
                 var table = Table.Table.init(tname, db.allocator);
 
-                var tfile = std.fs.cwd().openFile(k, .{}) catch |err| {
+                const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
+                defer db.allocator.free(tdir_name);
+
+                var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
+                defer tdir.close();
+
+                var tfile = tdir.openFile(k, .{}) catch |err| {
                     if (err == error.FileNotFound) continue;
                     return err;
                 };
@@ -136,7 +148,7 @@ pub fn DB() type {
                 var treader = tfile.reader(tbuff[0..]);
 
                 for (0..count_row) |_| {
-                    var element = Types.Element{ .field = std.StringHashMap(Types.FieldType).init(db.allocator), .tmane = tname };
+                    var element = Types.Element{ .field = std.StringHashMap(Types.FieldType).init(db.allocator), .tname = tname };
 
                     try element.load(&treader);
 
