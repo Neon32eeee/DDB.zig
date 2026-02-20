@@ -10,13 +10,29 @@ pub const FieldType = union(enum) {
 pub const Element = struct {
     tname: []const u8,
     field: std.StringHashMap(FieldType),
+    scheme: std.ArrayList([]const u8),
 
     pub fn get(self: @This(), key: []const u8) ?FieldType {
         return self.field.get(key) orelse null;
     }
 
+    pub fn getIndex(self: @This(), index: usize) ?FieldType {
+        if (index >= self.keysLen()) return null;
+        return self.field.get(self.scheme.items[index]) orelse null;
+    }
+
     pub fn getAs(self: @This(), comptime T: type, key: []const u8) ?T {
         const value = self.field.get(key) orelse return null;
+        return switch (value) {
+            .int => if (@TypeOf(value.int) == T) value.int else null,
+            .str => if (@TypeOf(value.str) == T) value.str else null,
+            .bool => if (@TypeOf(value.bool) == T) value.bool else null,
+            .float => if (@TypeOf(value.float) == T) value.float else null,
+        };
+    }
+
+    pub fn getIndexAs(self: @This(), comptime T: type, index: usize) ?T {
+        const value = self.field.get(self.scheme.items[index]) orelse return null;
         return switch (value) {
             .int => if (@TypeOf(value.int) == T) value.int else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
@@ -30,6 +46,12 @@ pub const Element = struct {
         try self.field.put(key, value);
     }
 
+    pub fn setIndex(self: *@This(), index: usize, value: FieldType) !void {
+        if (index >= self.keysLen()) return error.InvalidIndex;
+        if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
+        try self.field.put(self.scheme.items[index], value);
+    }
+
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
         const ft: FieldType = switch (T) {
@@ -40,6 +62,23 @@ pub const Element = struct {
             else => return error.UnsupportedType,
         };
         try self.field.put(key, ft);
+    }
+
+    pub fn setIndexAs(self: *@This(), comptime T: type, index: usize, value: T) !void {
+        if (index >= self.keysLen()) return error.InvalidIndex;
+        if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
+        const ft: FieldType = switch (T) {
+            i32 => .{ .int = value },
+            []const u8 => .{ .str = value },
+            bool => .{ .bool = value },
+            f64 => .{ .float = value },
+            else => return error.UnsupportedType,
+        };
+        try self.field.put(self.scheme.items[index], ft);
+    }
+
+    pub fn keysLen(self: @This()) usize {
+        return self.scheme.items.len;
     }
 
     pub fn save(self: @This(), writer: *std.fs.File.Writer) !void {
@@ -89,7 +128,7 @@ pub const Element = struct {
         try w.flush();
     }
 
-    pub fn load(self: *@This(), reader: *std.fs.File.Reader) !void {
+    pub fn load(self: *@This(), allocator: std.mem.Allocator, reader: *std.fs.File.Reader) !void {
         var r = &reader.interface;
         while (true) {
             const kl = r.takeInt(u32, .little) catch |err| {
@@ -99,6 +138,8 @@ pub const Element = struct {
             const ks = try r.take(@intCast(kl));
 
             const stored_key: []const u8 = ks;
+
+            try self.scheme.append(allocator, stored_key);
             const type_b = try r.take(1);
 
             switch (type_b[0]) {
@@ -139,8 +180,9 @@ pub const Element = struct {
         }
     }
 
-    pub fn deinit(self: *@This()) void {
+    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         self.field.deinit();
+        self.scheme.deinit(allocator);
     }
 };
 
@@ -166,32 +208,8 @@ test "Element" {
 
     const allocator = std.testing.allocator;
 
-    var HM = std.StringHashMap(FieldType).init(allocator);
-    defer HM.deinit();
-
-    const field = @typeInfo(@TypeOf(user));
-
-    inline for (field.@"struct".fields) |f| {
-        const name = f.name;
-        const ptr = @field(user, name);
-
-        if (f.type == i32) {
-            try HM.put(name, FieldType{ .int = ptr });
-        } else if (f.type == []const u8) {
-            try HM.put(name, FieldType{ .str = ptr });
-        } else if (f.type == bool) {
-            try HM.put(name, FieldType{ .bool = ptr });
-        } else if (f.type == f64) {
-            try HM.put(name, FieldType{ .float = ptr });
-        } else {
-            return error.InvalidType;
-        }
-    }
-
-    var e = Element{
-        .tname = @typeName(User),
-        .field = HM,
-    };
+    var e = try @import("ElementAdapter.zig").toElement(user, allocator);
+    defer e.deinit(allocator);
 
     try e.setAs([]const u8, "name", "JDH");
 }
@@ -214,7 +232,7 @@ test "Element save" {
     const allocator = std.testing.allocator;
 
     var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
-    defer Euser.deinit();
+    defer Euser.deinit(allocator);
 
     try Euser.save(&writer);
 }
@@ -237,10 +255,12 @@ test "Element load" {
     var Euser = Element{
         .tname = @typeName(User),
         .field = std.StringHashMap(FieldType).init(allocator),
+        .scheme = std.ArrayList([]const u8){},
     };
-    defer Euser.deinit();
+    defer Euser.deinit(allocator);
 
     try Euser.load(
+        allocator,
         &reader,
     );
 

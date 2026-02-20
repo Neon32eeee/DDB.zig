@@ -150,7 +150,7 @@ pub fn DB() type {
                 for (0..count_row) |_| {
                     var element = Types.Element{ .field = std.StringHashMap(Types.FieldType).init(db.allocator), .tname = tname };
 
-                    try element.load(&treader);
+                    try element.load(db.allocator, &treader);
 
                     try table.append(element);
                 }

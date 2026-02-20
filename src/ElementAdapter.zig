@@ -13,11 +13,14 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
     const tname = @typeName(T);
 
     var fields = std.StringHashMap(Types.FieldType).init(allocator);
+    var scheme = std.ArrayList([]const u8){};
     const info = @typeInfo(T);
 
     inline for (info.@"struct".fields) |field| {
         const name = field.name;
         const value = @field(a, name);
+
+        try scheme.append(allocator, name);
 
         if (field.type == i32) {
             try fields.put(name, Types.FieldType{ .int = value });
@@ -32,7 +35,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         }
     }
 
-    return Types.Element{ .tname = tname, .field = fields };
+    return Types.Element{ .tname = tname, .field = fields, .scheme = scheme };
 }
 
 test "to element" {
@@ -48,7 +51,7 @@ test "to element" {
     const allocator = gpa.allocator();
 
     var Euser = try toElement(user, allocator);
-    defer Euser.deinit();
+    defer Euser.deinit(allocator);
 
     if (Euser.getAs(i32, "id") != 0) {
         return error.InvalidID;
