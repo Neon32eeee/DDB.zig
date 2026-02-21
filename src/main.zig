@@ -25,8 +25,7 @@ pub fn main() !void {
 
     const Tplayers = db.getTable("players").?;
 
-    try Tplayers.append(Ep1);
-    try Tplayers.append(Ep2);
+    try Tplayers.appendMany(&.{ Ep1, Ep2 });
 
     try db.save();
 }

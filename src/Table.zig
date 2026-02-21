@@ -18,12 +18,24 @@ pub const Table = struct {
         };
     }
 
-    pub fn append(self: *Table, row: Types.Element) !void {
-        if (!std.mem.eql(u8, row.tname, self.tname)) {
-            std.debug.print("\n{s}\n", .{self.tname});
+    pub fn append(self: *Table, item: Types.Element) !void {
+        if (!std.mem.eql(u8, item.tname, self.tname)) {
             return error.InvalidType;
         }
-        try self.rows.append(self.allocator, row);
+        try self.rows.append(self.allocator, item);
+    }
+
+    pub fn appendMany(self: *Table, items: []const Types.Element) !void {
+        const n = items.len;
+
+        try self.rows.ensureUnusedCapacity(self.allocator, n);
+
+        for (items) |item| {
+            if (!std.mem.eql(u8, item.tname, self.tname)) {
+                return error.InvalidType;
+            }
+            self.rows.appendAssumeCapacity(item);
+        }
     }
 
     pub fn remove(self: *@This(), index: usize) !void {
