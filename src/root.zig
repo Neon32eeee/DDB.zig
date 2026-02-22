@@ -151,7 +151,7 @@ pub fn DB() type {
                     var element = Types.Element{
                         .field = std.StringHashMap(Types.FieldType).init(db.allocator),
                         .tname = tname,
-                        .scheme = std.ArrayList(db.allocator){},
+                        .scheme = std.ArrayList([]const u8){},
                     };
 
                     try element.load(db.allocator, &treader);
