@@ -50,7 +50,7 @@ pub const Table = struct {
     }
 
     pub fn iterator(self: *@This()) Types.TableIterator {
-        return Types.TableIterator(.{ .data = &self.rows, .index = 0 });
+        return Types.TableIterator{ .data = &self.rows, .index = 0 };
     }
 
     pub fn len(self: @This()) usize {

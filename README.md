@@ -87,6 +87,11 @@ zig build benchmark
 zig build run
 ```
 
+3. Load DB
+```
+zig build load
+```
+
 ## More
 
 more details at [Wiki](https://github.com/Neon32eeee/DDB.zig/wiki)
