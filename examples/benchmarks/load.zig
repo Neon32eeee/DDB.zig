@@ -35,9 +35,10 @@ pub fn main() !void {
             const erow = try ddb.Adapter.toElement(row, allocator);
             elements[i] = erow;
         }
-        try db.save();
 
         try table.appendMany(elements);
+
+        try db.save();
 
         var db_load = try ddb.DB().init("load.db", allocator);
         defer db_load.deinit();
@@ -49,14 +50,16 @@ pub fn main() !void {
         const end = std.time.nanoTimestamp();
 
         const total_ns: i128 = end - start;
-        const avg_ns: i128 = @divTrunc(total_ns, n);
 
-        const total_us: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_us));
+        const total_f64: f64 = @floatFromInt(total_ns);
+        const n_f64: f64 = @floatFromInt(n);
+        const avg_ns: f64 = total_f64 / n_f64;
+        const total_us: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms));
 
         const totsal_insert: usize = n / 1000;
 
         std.debug.print(
-            "{d}k element load ops: {d:.3} us total, {d} ns per op\n",
+            "{d}k element load ops: {d:.3} ms total, {d:.2} ns per op\n",
             .{ totsal_insert, total_us, avg_ns },
         );
     }
