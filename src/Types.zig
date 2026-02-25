@@ -190,9 +190,9 @@ pub const TableIterator = struct {
     data: *std.ArrayList(Element),
     index: usize,
 
-    pub fn next(self: *@This()) ?Element {
+    pub fn next(self: *@This()) ?*Element {
         if (self.index >= self.data.items.len) return null;
-        const v = self.data.items[self.index];
+        const v = &self.data.items[self.index];
         self.index += 1;
         return v;
     }
@@ -286,8 +286,10 @@ test "Next TableIterator" {
     const player1 = Player{ .hp = 100, .name = "Jon", .score = 100 };
     const player2 = Player{ .hp = 42, .name = "Len", .score = 110 };
 
-    const Ep1 = try @import("ElementAdapter.zig").toElement(player1, allocator);
-    const Ep2 = try @import("ElementAdapter.zig").toElement(player2, allocator);
+    var Ep1 = try @import("ElementAdapter.zig").toElement(player1, allocator);
+    var Ep2 = try @import("ElementAdapter.zig").toElement(player2, allocator);
+    defer Ep1.deinit(allocator);
+    defer Ep2.deinit(allocator);
 
     try list.append(allocator, Ep1);
     try list.append(allocator, Ep2);
@@ -295,8 +297,7 @@ test "Next TableIterator" {
     var it = TableIterator{ .data = &list, .index = 0 };
 
     while (it.next()) |*e| {
-        std.debug.print("\n{s}", .{e.getAs([]const u8, "name").?});
-        @constCast(e).deinit();
+        std.debug.print("\n{s}", .{e.*.getAs([]const u8, "name").?});
     }
     std.debug.print("\n", .{});
 }

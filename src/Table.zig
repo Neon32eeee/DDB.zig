@@ -59,6 +59,9 @@ pub const Table = struct {
 
     pub fn clear(self: *@This()) void {
         if (self.len() == 0) return;
+        for (self.rows.items) |*e| {
+            e.deinit(self.allocator);
+        }
         self.rows.clearAndFree(self.allocator);
     }
 
@@ -135,6 +138,4 @@ test "Clear Table" {
     try tb.append(Euser);
 
     tb.clear();
-
-    try tb.append(Euser);
 }

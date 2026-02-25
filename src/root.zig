@@ -2,6 +2,7 @@ const std = @import("std");
 const Table = @import("Table.zig");
 const Types = @import("Types.zig");
 pub const Adapter = @import("ElementAdapter.zig");
+pub const Element = Types.Element;
 
 pub fn DB() type {
     return struct {
@@ -147,8 +148,11 @@ pub fn DB() type {
 
                 var treader = tfile.reader(tbuff[0..]);
 
-                for (0..count_row) |_| {
-                    var element = Types.Element{
+                var elements = try db.allocator.alloc(Element, count_row);
+                defer db.allocator.free(elements);
+
+                for (0..count_row) |i| {
+                    var element = Element{
                         .field = std.StringHashMap(Types.FieldType).init(db.allocator),
                         .tname = tname,
                         .scheme = std.ArrayList([]const u8){},
@@ -156,8 +160,10 @@ pub fn DB() type {
 
                     try element.load(db.allocator, &treader);
 
-                    try table.append(element);
+                    elements[i] = element;
                 }
+
+                try table.appendMany(elements);
 
                 try db.tables.put(k, table);
             }

@@ -34,10 +34,10 @@ pub fn build(b: *std.Build) void {
     const run_step = b.step("run", "Run the app");
     const run_cmd = b.addRunArtifact(exe);
 
-    const benchmark = b.addExecutable(.{
-        .name = "benchmark",
+    const insert = b.addExecutable(.{
+        .name = "insert_benchmark",
         .root_module = b.createModule(.{
-            .root_source_file = b.path("examples/benchmark.zig"),
+            .root_source_file = b.path("examples/benchmarks/insert.zig"),
             .target = target,
             .optimize = optimize,
             .imports = &.{
@@ -46,8 +46,8 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
-    const benchmark_step = b.step("benchmark", "benchmark the app");
-    const benchmark_cmd = b.addRunArtifact(benchmark);
+    const insert_step = b.step("insert_benchmark", "insert the DB");
+    const insert_cmd = b.addRunArtifact(insert);
 
     const load = b.addExecutable(.{
         .name = "load",
@@ -64,14 +64,50 @@ pub fn build(b: *std.Build) void {
     const load_step = b.step("load", "load on DB");
     const load_cmd = b.addRunArtifact(load);
 
+    const save_benchmark = b.addExecutable(.{
+        .name = "save_benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/benchmarks/save.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "ddb", .module = mod },
+            },
+        }),
+    });
+
+    const save_step = b.step("save_benchmark", "save benchmark the DB");
+    const save_cmd = b.addRunArtifact(save_benchmark);
+
+    const load_benchmark = b.addExecutable(.{
+        .name = "load_benchmark",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("examples/benchmarks/load.zig"),
+            .target = target,
+            .optimize = optimize,
+            .imports = &.{
+                .{ .name = "ddb", .module = mod },
+            },
+        }),
+    });
+
+    const load_benchmark_step = b.step("load_benchmark", "load benchmark the DB");
+    const load_benchmark_cmd = b.addRunArtifact(load_benchmark);
+
     run_step.dependOn(&run_cmd.step);
     run_cmd.step.dependOn(b.getInstallStep());
 
-    benchmark_step.dependOn(&benchmark_cmd.step);
-    benchmark_cmd.step.dependOn(b.getInstallStep());
+    insert_step.dependOn(&insert_cmd.step);
+    insert_cmd.step.dependOn(b.getInstallStep());
 
     load_step.dependOn(&load_cmd.step);
     load_cmd.step.dependOn(b.getInstallStep());
+
+    save_step.dependOn(&save_cmd.step);
+    save_cmd.step.dependOn(b.getInstallStep());
+
+    load_benchmark_step.dependOn(&load_benchmark_cmd.step);
+    load_benchmark_cmd.step.dependOn(b.getInstallStep());
 
     if (b.args) |args| {
         run_cmd.addArgs(args);

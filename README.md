@@ -77,20 +77,32 @@ pub fn build(b: *std.Build) void {
 
 ## Coomand
 
-1. Run benchmark
-```
-zig build benchmark
-```
-
-2. Run main
+1. Run main
 ```
 zig build run
 ```
 
-3. Load DB
+2. Load DB
 ```
 zig build load
 ```
+
+### Benchmarks
+
+   1. Insert
+   ```
+   zig build insert_benchmark -Doptimize=ReleaseFast
+   ```
+
+   2. Save
+   ```
+   zig build save_benchmark -Doptimize=ReleaseFast
+   ```
+
+   3. Load 
+   ```
+   zig build load_benchmark -Doptimize=ReleaseFast
+   ```
 
 ## More
 
