@@ -40,15 +40,17 @@ pub fn main() !void {
 
         const start = std.time.nanoTimestamp();
 
-        try db.save();
+        for (0..1000) |_| {
+            try db.save();
+        }
 
         const end = std.time.nanoTimestamp();
 
         const total_ns: i128 = end - start;
         const avg_ns: i128 = @divTrunc(total_ns, n);
 
-        const total_sec: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_s));
-        const avg_sec: f64 = @as(f64, @floatFromInt(avg_ns)) / @as(f64, @floatFromInt(std.time.ns_per_us));
+        const total_sec: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_s)) / 1000;
+        const avg_sec: f64 = @as(f64, @floatFromInt(avg_ns)) / @as(f64, @floatFromInt(std.time.ns_per_us)) / 1000;
 
         const file_info = try std.fs.cwd().statFile("save.dbdir/users");
 

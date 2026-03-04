@@ -53,7 +53,7 @@ pub fn DB() type {
             var file = try std.fs.cwd().createFile(db.path, .{});
             defer file.close();
 
-            const buff = try db.allocator.alloc(u8, 8);
+            const buff = try db.allocator.alloc(u8, 128);
             defer db.allocator.free(buff);
 
             var writer = file.writer(buff);
@@ -70,29 +70,61 @@ pub fn DB() type {
                 try w.writeInt(u32, @intCast(v.tname.len), .little);
                 try w.writeAll(v.tname);
                 try w.writeInt(usize, @intCast(v.rows.items.len), .little);
-
-                const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
-                defer db.allocator.free(tdir_name);
-
-                var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
-                defer tdir.close();
-
-                var table_file = try tdir.createFile(k, .{});
-                defer table_file.close();
-
-                const tbuff = try db.allocator.alloc(u8, 8);
-                defer db.allocator.free(tbuff);
-
-                var twriter = table_file.writer(tbuff);
-                var tw = &twriter.interface;
-
-                for (v.rows.items) |elem| {
-                    try elem.save(&twriter);
-                }
-
-                try tw.flush();
             }
+
             try w.flush();
+
+            const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
+            defer db.allocator.free(tdir_name);
+
+            var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
+            defer tdir.close();
+
+            const n_threads = std.Thread.getCpuCount() catch 4;
+            var pool: std.Thread.Pool = undefined;
+            try pool.init(.{ .allocator = db.allocator, .n_jobs = @intCast(n_threads) });
+            defer pool.deinit();
+
+            var wg: std.Thread.WaitGroup = .{};
+
+            it = db.tables.iterator();
+
+            while (it.next()) |e| {
+                const k = e.key_ptr.*;
+                const v = e.value_ptr;
+
+                pool.spawnWg(&wg, saveTableTask, .{
+                    db.allocator,
+                    tdir_name,
+                    k,
+                    v.rows.items,
+                });
+            }
+        }
+
+        fn saveTableTask(
+            allocator: std.mem.Allocator,
+            tdir_name: []const u8,
+            table_name: []const u8,
+            rows: []const Element,
+        ) void {
+            var tdir = std.fs.cwd().openDir(tdir_name, .{}) catch return;
+            defer tdir.close();
+
+            var table_file = tdir.createFile(table_name, .{}) catch return;
+            defer table_file.close();
+
+            const tbuff = allocator.alloc(u8, 128) catch return;
+            defer allocator.free(tbuff);
+
+            var twriter = table_file.writer(tbuff);
+            var tw = &twriter.interface;
+
+            for (rows) |elem| {
+                elem.save(&twriter) catch return;
+            }
+
+            tw.flush() catch {};
         }
 
         pub fn load(db: *@This()) !void {
