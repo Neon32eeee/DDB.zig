@@ -49,6 +49,11 @@ pub const Table = struct {
         return self.rows.items[index];
     }
 
+    pub fn getMut(self: *Table, index: usize) ?*Types.Element {
+        if (self.len() <= index) return null;
+        return &self.rows.items[index];
+    }
+
     pub fn iterator(self: *@This()) Types.TableIterator {
         return Types.TableIterator{ .data = &self.rows, .index = 0 };
     }
@@ -115,6 +120,29 @@ test "Get index row" {
     try tb.append(Euser);
 
     const get = tb.get(0) orelse unreachable;
+    std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
+}
+
+test "GtMut index row" {
+    const User = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    defer _ = gpa.deinit();
+    const allocator = gpa.allocator();
+
+    var tb = Table.init(@typeName(User), allocator);
+    defer tb.deinit();
+
+    const user = User{ .id = 0, .name = "JDH" };
+
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+
+    try tb.append(Euser);
+
+    const get = tb.getMut(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
 }
 
