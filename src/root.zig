@@ -45,6 +45,12 @@ pub fn DB() type {
             }
         }
 
+        pub fn dropTable(db: *@This(), name: []const u8) !void {
+            var targetTable = db.tables.get(name) orelse return error.TableNotFound;
+            if (!db.tables.remove(name)) return error.ErrorRemoveTable;
+            targetTable.deinit();
+        }
+
         pub fn getTable(db: @This(), name: []const u8) ?*Table.Table {
             return db.tables.getPtr(name) orelse null;
         }
@@ -220,6 +226,20 @@ test "Create Table" {
     };
 
     try db.createTable("users", Users);
+}
+
+test "Drop Table" {
+    const alloc = std.heap.page_allocator;
+    var db = try DB().init("DB.db", alloc);
+    defer db.deinit();
+
+    const Users = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    try db.createTable("users", Users);
+    try db.dropTable("users");
 }
 
 test "Get Table" {
