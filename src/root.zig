@@ -106,6 +106,8 @@ pub fn DB() type {
                     v.rows.items,
                 });
             }
+
+            wg.wait();
         }
 
         fn saveTableTask(

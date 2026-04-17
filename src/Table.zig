@@ -49,7 +49,7 @@ pub const Table = struct {
         return self.rows.items[index];
     }
 
-    pub fn getMut(self: *Table, index: usize) ?*Types.Element {
+    pub fn getMut(self: Table, index: usize) ?*Types.Element {
         if (self.len() <= index) return null;
         return &self.rows.items[index];
     }
@@ -123,7 +123,7 @@ test "Get index row" {
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
 }
 
-test "GtMut index row" {
+test "Get Mut index row" {
     const User = struct {
         id: i32,
         name: []const u8,
