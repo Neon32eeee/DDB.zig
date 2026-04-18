@@ -2,7 +2,7 @@ const std = @import("std");
 const Table = @import("Table.zig");
 
 pub const FieldType = union(enum) {
-    int: i32,
+    int32: i32,
     str: []const u8,
     bool: bool,
     float: f64,
@@ -25,7 +25,7 @@ pub const Element = struct {
     pub fn getAs(self: @This(), comptime T: type, key: []const u8) ?T {
         const value = self.field.get(key) orelse return null;
         return switch (value) {
-            .int => if (@TypeOf(value.int) == T) value.int else null,
+            .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -35,7 +35,7 @@ pub const Element = struct {
     pub fn getIndexAs(self: @This(), comptime T: type, index: usize) ?T {
         const value = self.field.get(self.scheme.items[index]) orelse return null;
         return switch (value) {
-            .int => if (@TypeOf(value.int) == T) value.int else null,
+            .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -56,7 +56,7 @@ pub const Element = struct {
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
         const ft: FieldType = switch (T) {
-            i32 => .{ .int = value },
+            i32 => .{ .int32 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -69,7 +69,7 @@ pub const Element = struct {
         if (index >= self.keysLen()) return error.InvalidIndex;
         if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
         const ft: FieldType = switch (T) {
-            i32 => .{ .int = value },
+            i32 => .{ .int32 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -96,9 +96,9 @@ pub const Element = struct {
             const v = e.value_ptr.*;
 
             switch (v) {
-                .int => {
+                .int32 => {
                     try w.writeByte(0);
-                    try w.writeInt(i32, v.int, .little);
+                    try w.writeInt(i32, v.int32, .little);
                 },
                 .str => {
                     try w.writeByte(1);
@@ -145,9 +145,9 @@ pub const Element = struct {
 
             switch (type_b[0]) {
                 0 => {
-                    // int
+                    // int32
                     const val = try r.takeInt(i32, .little);
-                    try self.field.put(stored_key, .{ .int = val });
+                    try self.field.put(stored_key, .{ .int32 = val });
                 },
                 1 => {
                     // str
@@ -166,8 +166,8 @@ pub const Element = struct {
                 },
                 3 => {
                     // float
-                    const int = try r.takeInt(u64, .little);
-                    const val: f64 = @bitCast(int);
+                    const int32 = try r.takeInt(u64, .little);
+                    const val: f64 = @bitCast(int32);
                     try self.field.put(stored_key, .{ .float = val });
                 },
                 else => return error.InvalidFormat,

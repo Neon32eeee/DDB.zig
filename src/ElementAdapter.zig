@@ -23,7 +23,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         try scheme.append(allocator, name);
 
         if (field.type == i32) {
-            try fields.put(name, Types.FieldType{ .int = value });
+            try fields.put(name, Types.FieldType{ .int32 = value });
         } else if (field.type == []const u8) {
             try fields.put(name, Types.FieldType{ .str = value });
         } else if (field.type == bool) {
