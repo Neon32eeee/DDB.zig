@@ -1,10 +1,15 @@
 const std = @import("std");
 const Table = @import("Table.zig");
+
 pub const FieldType = union(enum) {
     int8: i8,
     int16: i16,
     int32: i32,
     int64: i64,
+    uint8: u8,
+    uint16: u16,
+    uint32: u32,
+    uint64: u64,
     str: []const u8,
     bool: bool,
     float: f64,
@@ -31,6 +36,10 @@ pub const Element = struct {
             .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
             .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
             .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
+            .uint8 => if (@TypeOf(value.uint8) == T) value.uint8 else null,
+            .uint16 => if (@TypeOf(value.uint16) == T) value.uint16 else null,
+            .uint32 => if (@TypeOf(value.uint32) == T) value.uint32 else null,
+            .uint64 => if (@TypeOf(value.uint64) == T) value.uint64 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -44,6 +53,10 @@ pub const Element = struct {
             .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
             .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
             .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
+            .uint8 => if (@TypeOf(value.uint8) == T) value.uint8 else null,
+            .uint16 => if (@TypeOf(value.uint16) == T) value.uint16 else null,
+            .uint32 => if (@TypeOf(value.uint32) == T) value.uint32 else null,
+            .uint64 => if (@TypeOf(value.uint64) == T) value.uint64 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -68,6 +81,10 @@ pub const Element = struct {
             i16 => .{ .int16 = value },
             i32 => .{ .int32 = value },
             i64 => .{ .int64 = value },
+            u8 => .{ .uint8 = value },
+            u16 => .{ .uint16 = value },
+            u32 => .{ .uint32 = value },
+            u64 => .{ .uint64 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -84,6 +101,10 @@ pub const Element = struct {
             i16 => .{ .int16 = value },
             i32 => .{ .int32 = value },
             i64 => .{ .int64 = value },
+            u8 => .{ .uint8 = value },
+            u16 => .{ .uint16 = value },
+            u32 => .{ .uint32 = value },
+            u64 => .{ .uint64 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -138,6 +159,22 @@ pub const Element = struct {
                 .int64 => {
                     try w.writeByte(6);
                     try w.writeInt(i64, v.int64, .little);
+                },
+                .uint8 => {
+                    try w.writeByte(7);
+                    try w.writeInt(u8, v.uint8, .little);
+                },
+                .uint16 => {
+                    try w.writeByte(8);
+                    try w.writeInt(u16, v.uint16, .little);
+                },
+                .uint32 => {
+                    try w.writeByte(9);
+                    try w.writeInt(u32, v.uint32, .little);
+                },
+                .uint64 => {
+                    try w.writeByte(10);
+                    try w.writeInt(u64, v.uint64, .little);
                 },
             }
 
@@ -210,6 +247,26 @@ pub const Element = struct {
                     // int64
                     const val = try r.takeInt(i64, .little);
                     try self.field.put(stored_key, .{ .int64 = val });
+                },
+                7 => {
+                    // uint8
+                    const val = try r.takeInt(u8, .little);
+                    try self.field.put(stored_key, .{ .uint8 = val });
+                },
+                8 => {
+                    // uint16
+                    const val = try r.takeInt(u16, .little);
+                    try self.field.put(stored_key, .{ .uint16 = val });
+                },
+                9 => {
+                    // uint32
+                    const val = try r.takeInt(u32, .little);
+                    try self.field.put(stored_key, .{ .uint32 = val });
+                },
+                10 => {
+                    // uint64
+                    const val = try r.takeInt(u64, .little);
+                    try self.field.put(stored_key, .{ .uint64 = val });
                 },
                 else => return error.InvalidFormat,
             }
