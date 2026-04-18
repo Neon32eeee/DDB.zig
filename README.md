@@ -56,21 +56,27 @@ pub fn build(b: *std.Build) void {
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
-    const exe = b.addModule("myproject", .{
-        .root_source_file = b.path("src/root.zig"),
+    const exe = b.addExecutable(.{
+        .name = "myproject",
+        .root_module = b.createModule(.{
+            .root_source_file = b.path("src/main.zig"),
+            .target = target,
+            .optimize = optimize,
+        }),
+    });
+
+    const ddb = b.dependency("ddb", .{
         .target = target,
         .optimize = optimize,
     });
 
-+    const ddb = b.dependency("ddb", .{
-+        .target = target,
-+        .optimize = optimize,
-+    });
-
-+    const ddb_module = b.addModule("ddb", .{ .root_source_file = ddb.path("src/root.zig") });
+    const ddb_module = b.createModule(.{
+        .root_source_file = ddb.path("src/root.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
 
     exe.root_module.addImport("ddb", ddb_module);
-
     b.installArtifact(exe);
 }
 ```
