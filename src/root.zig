@@ -55,6 +55,12 @@ pub fn DB() type {
             return db.tables.getPtr(name) orelse null;
         }
 
+        pub fn iterator(db: *@This()) Types.DBIterator {
+            return Types.DBIterator{
+                .it = db.tables.iterator(),
+            };
+        }
+
         pub fn save(db: @This()) !void {
             var file = try std.fs.cwd().createFile(db.path, .{});
             defer file.close();
@@ -304,4 +310,28 @@ test "Load DB" {
     const Eusers2 = Tusers.get(1).?;
 
     std.debug.print("\n{s}, {s}\n", .{ Eusers.getAs([]const u8, "name").?, Eusers2.getAs([]const u8, "name").? });
+}
+
+test "Iterator DB" {
+    const alloc = std.testing.allocator;
+    var db = try DB().init("DB", alloc);
+    defer db.deinit();
+
+    const Users = struct {
+        id: i32,
+        name: []const u8,
+    };
+
+    const Item = struct {
+        name: []const u8,
+    };
+
+    try db.createTable("users", Users);
+    try db.createTable("items", Item);
+
+    var it = db.iterator();
+
+    while (it.next()) |t| {
+        std.debug.print("\n{s}", .{t.*.tname});
+    }
 }

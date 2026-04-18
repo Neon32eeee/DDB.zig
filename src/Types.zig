@@ -1,4 +1,5 @@
 const std = @import("std");
+const Table = @import("Table.zig");
 
 pub const FieldType = union(enum) {
     int: i32,
@@ -183,6 +184,16 @@ pub const Element = struct {
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         self.field.deinit();
         self.scheme.deinit(allocator);
+    }
+};
+
+pub const DBIterator = struct {
+    it: std.StringHashMap(Table.Table).Iterator,
+
+    pub fn next(self: *@This()) ?*Table.Table {
+        const nextRes = self.it.next() orelse return null;
+
+        return &nextRes.value_ptr.*;
     }
 };
 
