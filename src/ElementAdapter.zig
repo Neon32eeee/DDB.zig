@@ -22,17 +22,18 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
 
         try scheme.append(allocator, name);
 
-        if (field.type == i32) {
-            try fields.put(name, Types.FieldType{ .int32 = value });
-        } else if (field.type == []const u8) {
-            try fields.put(name, Types.FieldType{ .str = value });
-        } else if (field.type == bool) {
-            try fields.put(name, Types.FieldType{ .bool = value });
-        } else if (field.type == f64) {
-            try fields.put(name, Types.FieldType{ .float = value });
-        } else {
-            return error.InvalidType;
-        }
+        const putedData = switch (field.type) {
+            i8 => Types.FieldType{ .int8 = value },
+            i16 => Types.FieldType{ .int16 = value },
+            i32 => Types.FieldType{ .int32 = value },
+            i64 => Types.FieldType{ .int64 = value },
+            []const u8 => Types.FieldType{ .str = value },
+            bool => Types.FieldType{ .bool = value },
+            f64 => Types.FieldType{ .float = value },
+            else => return error.InvalidType,
+        };
+
+        try fields.put(name, putedData);
     }
 
     return Types.Element{ .tname = tname, .field = fields, .scheme = scheme };

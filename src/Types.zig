@@ -1,8 +1,10 @@
 const std = @import("std");
 const Table = @import("Table.zig");
-
 pub const FieldType = union(enum) {
+    int8: i8,
+    int16: i16,
     int32: i32,
+    int64: i64,
     str: []const u8,
     bool: bool,
     float: f64,
@@ -25,7 +27,10 @@ pub const Element = struct {
     pub fn getAs(self: @This(), comptime T: type, key: []const u8) ?T {
         const value = self.field.get(key) orelse return null;
         return switch (value) {
+            .int8 => if (@TypeOf(value.int8) == T) value.int8 else null,
+            .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
             .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
+            .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -35,7 +40,10 @@ pub const Element = struct {
     pub fn getIndexAs(self: @This(), comptime T: type, index: usize) ?T {
         const value = self.field.get(self.scheme.items[index]) orelse return null;
         return switch (value) {
+            .int8 => if (@TypeOf(value.int8) == T) value.int8 else null,
+            .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
             .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
+            .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
             .str => if (@TypeOf(value.str) == T) value.str else null,
             .bool => if (@TypeOf(value.bool) == T) value.bool else null,
             .float => if (@TypeOf(value.float) == T) value.float else null,
@@ -56,7 +64,10 @@ pub const Element = struct {
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
         const ft: FieldType = switch (T) {
+            i8 => .{ .int8 = value },
+            i16 => .{ .int16 = value },
             i32 => .{ .int32 = value },
+            i64 => .{ .int64 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -69,7 +80,10 @@ pub const Element = struct {
         if (index >= self.keysLen()) return error.InvalidIndex;
         if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
         const ft: FieldType = switch (T) {
+            i8 => .{ .int8 = value },
+            i16 => .{ .int16 = value },
             i32 => .{ .int32 = value },
+            i64 => .{ .int64 = value },
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
@@ -112,6 +126,18 @@ pub const Element = struct {
                 .float => {
                     try w.writeByte(3);
                     try w.writeInt(u64, @bitCast(v.float), .little);
+                },
+                .int8 => {
+                    try w.writeByte(4);
+                    try w.writeInt(i8, v.int8, .little);
+                },
+                .int16 => {
+                    try w.writeByte(5);
+                    try w.writeInt(i16, v.int16, .little);
+                },
+                .int64 => {
+                    try w.writeByte(6);
+                    try w.writeInt(i64, v.int64, .little);
                 },
             }
 
@@ -169,6 +195,21 @@ pub const Element = struct {
                     const int32 = try r.takeInt(u64, .little);
                     const val: f64 = @bitCast(int32);
                     try self.field.put(stored_key, .{ .float = val });
+                },
+                4 => {
+                    // int8
+                    const val = try r.takeInt(i8, .little);
+                    try self.field.put(stored_key, .{ .int8 = val });
+                },
+                5 => {
+                    // int16
+                    const val = try r.takeInt(i16, .little);
+                    try self.field.put(stored_key, .{ .int16 = val });
+                },
+                6 => {
+                    // int64
+                    const val = try r.takeInt(i64, .little);
+                    try self.field.put(stored_key, .{ .int64 = val });
                 },
                 else => return error.InvalidFormat,
             }
