@@ -278,6 +278,16 @@ pub const Element = struct {
         }
     }
 
+    pub fn clone(
+        self: @This(),
+    ) @This() {
+        return Element{
+            .tname = self.tname,
+            .field = self.field,
+            .scheme = self.scheme,
+        };
+    }
+
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
         self.field.deinit();
         self.scheme.deinit(allocator);
