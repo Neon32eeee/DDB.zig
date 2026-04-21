@@ -34,6 +34,16 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
             []const u8 => Types.FieldType{ .str = value },
             bool => Types.FieldType{ .bool = value },
             f64 => Types.FieldType{ .float = value },
+            []const i8 => Types.FieldType{ .array = .{ .i8 = value } },
+            []const i16 => Types.FieldType{ .array = .{ .i16 = value } },
+            []const i32 => Types.FieldType{ .array = .{ .i32 = value } },
+            []const i64 => Types.FieldType{ .array = .{ .i64 = value } },
+            []const u16 => Types.FieldType{ .array = .{ .u16 = value } },
+            []const u32 => Types.FieldType{ .array = .{ .u32 = value } },
+            []const u64 => Types.FieldType{ .array = .{ .u64 = value } },
+            []const []const u8 => Types.FieldType{ .array = .{ .str = value } },
+            []const bool => Types.FieldType{ .array = .{ .bool = value } },
+            []const f64 => Types.FieldType{ .array = .{ .f64 = value } },
             else => return error.InvalidType,
         };
 

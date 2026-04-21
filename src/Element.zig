@@ -12,6 +12,19 @@ pub const FieldType = union(enum) {
     str: []const u8,
     bool: bool,
     float: f64,
+    array: union(enum) {
+        i8: []const i8,
+        i16: []const i16,
+        i32: []const i32,
+        i64: []const i64,
+        u8: []const u8,
+        u16: []const u16,
+        u32: []const u32,
+        u64: []const u64,
+        str: []const []const u8,
+        bool: []const bool,
+        f64: []const f64,
+    },
 };
 
 pub const Element = struct {
@@ -30,35 +43,24 @@ pub const Element = struct {
 
     pub fn getAs(self: @This(), comptime T: type, key: []const u8) ?T {
         const value = self.field.get(key) orelse return null;
+
         return switch (value) {
-            .int8 => if (@TypeOf(value.int8) == T) value.int8 else null,
-            .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
-            .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
-            .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
-            .uint8 => if (@TypeOf(value.uint8) == T) value.uint8 else null,
-            .uint16 => if (@TypeOf(value.uint16) == T) value.uint16 else null,
-            .uint32 => if (@TypeOf(value.uint32) == T) value.uint32 else null,
-            .uint64 => if (@TypeOf(value.uint64) == T) value.uint64 else null,
-            .str => if (@TypeOf(value.str) == T) value.str else null,
-            .bool => if (@TypeOf(value.bool) == T) value.bool else null,
-            .float => if (@TypeOf(value.float) == T) value.float else null,
+            inline .int8, .int16, .int32, .int64, .uint8, .uint16, .uint32, .uint64, .str, .bool, .float => |payload| if (@TypeOf(payload) == T) payload else null,
+
+            .array => |arr| switch (arr) {
+                inline .i8, .i16, .i32, .i64, .u8, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
+            },
         };
     }
 
     pub fn getIndexAs(self: @This(), comptime T: type, index: usize) ?T {
         const value = self.field.get(self.scheme.items[index]) orelse return null;
         return switch (value) {
-            .int8 => if (@TypeOf(value.int8) == T) value.int8 else null,
-            .int16 => if (@TypeOf(value.int16) == T) value.int16 else null,
-            .int32 => if (@TypeOf(value.int32) == T) value.int32 else null,
-            .int64 => if (@TypeOf(value.int64) == T) value.int64 else null,
-            .uint8 => if (@TypeOf(value.uint8) == T) value.uint8 else null,
-            .uint16 => if (@TypeOf(value.uint16) == T) value.uint16 else null,
-            .uint32 => if (@TypeOf(value.uint32) == T) value.uint32 else null,
-            .uint64 => if (@TypeOf(value.uint64) == T) value.uint64 else null,
-            .str => if (@TypeOf(value.str) == T) value.str else null,
-            .bool => if (@TypeOf(value.bool) == T) value.bool else null,
-            .float => if (@TypeOf(value.float) == T) value.float else null,
+            inline .int8, .int16, .int32, .int64, .uint8, .uint16, .uint32, .uint64, .str, .bool, .float => |payload| if (@TypeOf(payload) == T) payload else null,
+
+            .array => |arr| switch (arr) {
+                inline .i8, .i16, .i32, .i64, .u8, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
+            },
         };
     }
 
@@ -75,6 +77,7 @@ pub const Element = struct {
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
+
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },
             i16 => .{ .int16 = value },
@@ -87,8 +90,21 @@ pub const Element = struct {
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
+
+            []const i8 => .{ .array = .{ .i8 = value } },
+            []const i16 => .{ .array = .{ .i16 = value } },
+            []const i32 => .{ .array = .{ .i32 = value } },
+            []const i64 => .{ .array = .{ .i64 = value } },
+            []const u16 => .{ .array = .{ .u16 = value } },
+            []const u32 => .{ .array = .{ .u32 = value } },
+            []const u64 => .{ .array = .{ .u64 = value } },
+            []const []const u8 => .{ .array = .{ .str = value } },
+            []const bool => .{ .array = .{ .bool = value } },
+            []const f64 => .{ .array = .{ .f64 = value } },
+
             else => return error.UnsupportedType,
         };
+
         try self.field.put(key, ft);
     }
 
@@ -107,6 +123,19 @@ pub const Element = struct {
             []const u8 => .{ .str = value },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
+
+            []const i8 => .{ .array = .{ .i8 = value } },
+            []const i16 => .{ .array = .{ .i16 = value } },
+            []const i32 => .{ .array = .{ .i32 = value } },
+            []const i64 => .{ .array = .{ .i64 = value } },
+            []const u8 => .{ .array = .{ .u8 = value } },
+            []const u16 => .{ .array = .{ .u16 = value } },
+            []const u32 => .{ .array = .{ .u32 = value } },
+            []const u64 => .{ .array = .{ .u64 = value } },
+            []const []const u8 => .{ .array = .{ .str = value } },
+            []const bool => .{ .array = .{ .bool = value } },
+            []const f64 => .{ .array = .{ .f64 = value } },
+
             else => return error.UnsupportedType,
         };
         try self.field.put(self.scheme.items[index], ft);
@@ -175,6 +204,56 @@ pub const Element = struct {
                     try w.writeByte(10);
                     try w.writeInt(u64, v.uint64, .little);
                 },
+                .array => |arr| {
+                    try w.writeByte(11);
+
+                    switch (arr) {
+                        .i8 => {
+                            try w.writeByte(0);
+                            try writeArray(i8, w, arr.i8);
+                        },
+                        .i16 => {
+                            try w.writeByte(1);
+                            try writeArray(i16, w, arr.i16);
+                        },
+                        .i32 => {
+                            try w.writeByte(2);
+                            try writeArray(i32, w, arr.i32);
+                        },
+                        .i64 => {
+                            try w.writeByte(3);
+                            try writeArray(i64, w, arr.i64);
+                        },
+                        .u8 => {
+                            try w.writeByte(4);
+                            try writeArray(u8, w, arr.u8);
+                        },
+                        .u16 => {
+                            try w.writeByte(5);
+                            try writeArray(u16, w, arr.u16);
+                        },
+                        .u32 => {
+                            try w.writeByte(6);
+                            try writeArray(u32, w, arr.u32);
+                        },
+                        .u64 => {
+                            try w.writeByte(7);
+                            try writeArray(u64, w, arr.u64);
+                        },
+                        .str => {
+                            try w.writeByte(8);
+                            try writeStrArray(w, arr.str);
+                        },
+                        .bool => {
+                            try w.writeByte(9);
+                            try writeBoolArray(w, arr.bool);
+                        },
+                        .f64 => {
+                            try w.writeByte(10);
+                            try writeFloatArray(w, arr.f64);
+                        },
+                    }
+                },
             }
 
             const peek = iterator.next();
@@ -189,6 +268,35 @@ pub const Element = struct {
         }
 
         try w.flush();
+    }
+
+    fn writeArray(comptime T: type, w: *std.Io.Writer, slice: []const T) !void {
+        try w.writeInt(u32, @intCast(slice.len), .little);
+        for (slice) |item| {
+            try w.writeInt(T, item, .little);
+        }
+    }
+
+    fn writeFloatArray(w: *std.Io.Writer, slice: []const f64) !void {
+        try w.writeInt(u32, @intCast(slice.len), .little);
+        for (slice) |item| {
+            try w.writeInt(u64, @bitCast(item), .little);
+        }
+    }
+
+    fn writeStrArray(w: *std.Io.Writer, slice: []const []const u8) !void {
+        try w.writeInt(u32, @intCast(slice.len), .little);
+        for (slice) |s| {
+            try w.writeInt(u32, @intCast(s.len), .little);
+            try w.writeAll(s);
+        }
+    }
+
+    fn writeBoolArray(w: *std.Io.Writer, slice: []const bool) !void {
+        try w.writeInt(u32, @intCast(slice.len), .little);
+        for (slice) |b| {
+            try w.writeByte(@intFromBool(b));
+        }
     }
 
     pub fn load(self: *@This(), allocator: std.mem.Allocator, reader: *std.fs.File.Reader) !void {
@@ -267,6 +375,59 @@ pub const Element = struct {
                     const val = try r.takeInt(u64, .little);
                     try self.field.put(stored_key, .{ .uint64 = val });
                 },
+                11 => {
+                    // array
+                    const type_c = try r.take(1);
+                    const len = try r.takeInt(u32, .little);
+
+                    switch (type_c[0]) {
+                        0 => {
+                            const v = try loadArray(i8, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .i8 = v } });
+                        },
+                        1 => {
+                            const v = try loadArray(i16, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .i16 = v } });
+                        },
+                        2 => {
+                            const v = try loadArray(i32, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .i32 = v } });
+                        },
+                        3 => {
+                            const v = try loadArray(i64, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .i64 = v } });
+                        },
+                        4 => {
+                            const v = try loadArray(u8, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .u8 = v } });
+                        },
+                        5 => {
+                            const v = try loadArray(u16, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .u16 = v } });
+                        },
+                        6 => {
+                            const v = try loadArray(u32, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .u32 = v } });
+                        },
+                        7 => {
+                            const v = try loadArray(u64, r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .u64 = v } });
+                        },
+                        8 => {
+                            const v = try loadStrArray(r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .str = v } });
+                        },
+                        9 => {
+                            const v = try loadBoolArray(r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .bool = v } });
+                        },
+                        10 => {
+                            const v = try loadFloatArray(r, len, allocator);
+                            try self.field.put(stored_key, .{ .array = .{ .f64 = v } });
+                        },
+                        else => return error.InvalidFormat,
+                    }
+                },
                 else => return error.InvalidFormat,
             }
 
@@ -276,6 +437,45 @@ pub const Element = struct {
                 return;
             }
         }
+    }
+
+    fn loadArray(comptime T: type, r: *std.Io.Reader, len: u32, allocator: std.mem.Allocator) ![]T {
+        const val = try allocator.alloc(T, @intCast(len));
+        for (0..len) |i| {
+            const v = try r.takeInt(T, .little);
+            val[i] = v;
+        }
+        return val;
+    }
+
+    fn loadStrArray(r: *std.Io.Reader, len: u32, allocator: std.mem.Allocator) ![][]const u8 {
+        const val = try allocator.alloc([]const u8, @intCast(len));
+        for (0..len) |i| {
+            const l = try r.takeInt(u32, .little);
+            const s = try r.take(@intCast(l));
+            val[i] = s;
+        }
+        return val;
+    }
+
+    fn loadBoolArray(r: *std.Io.Reader, len: u32, allocator: std.mem.Allocator) ![]bool {
+        const val = try allocator.alloc(bool, @intCast(len));
+        for (0..len) |i| {
+            const bool_b = try r.take(1);
+            const b = bool_b[0] != 0;
+            val[i] = b;
+        }
+        return val;
+    }
+
+    fn loadFloatArray(r: *std.Io.Reader, len: u32, allocator: std.mem.Allocator) ![]f64 {
+        const val = try allocator.alloc(f64, @intCast(len));
+        for (0..len) |i| {
+            const int32 = try r.takeInt(u64, .little);
+            const v: f64 = @bitCast(int32);
+            val[i] = v;
+        }
+        return val;
     }
 
     pub fn clone(
@@ -289,6 +489,31 @@ pub const Element = struct {
     }
 
     pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+        var it = self.field.iterator();
+        while (it.next()) |entry| {
+            switch (entry.value_ptr.*) {
+                .array => |arr| {
+                    switch (arr) {
+                        .i8 => |slice| allocator.free(slice),
+                        .i16 => |slice| allocator.free(slice),
+                        .i32 => |slice| allocator.free(slice),
+                        .i64 => |slice| allocator.free(slice),
+                        .u8 => |slice| allocator.free(slice),
+                        .u16 => |slice| allocator.free(slice),
+                        .u32 => |slice| allocator.free(slice),
+                        .u64 => |slice| allocator.free(slice),
+                        .bool => |slice| allocator.free(slice),
+                        .f64 => |slice| allocator.free(slice),
+                        .str => |slice| {
+                            for (slice) |s| allocator.free(s);
+                            allocator.free(slice);
+                        },
+                    }
+                },
+                else => {},
+            }
+        }
+
         self.field.deinit();
         self.scheme.deinit(allocator);
     }
@@ -365,4 +590,48 @@ test "Element load" {
     }
 
     std.debug.print("\n{s}\n", .{Euser.getAs([]const u8, "name").?});
+}
+
+test "Element array" {
+    const User = struct {
+        id: i32,
+        birthday: []const i32,
+    };
+
+    // Save
+    const allocator = std.testing.allocator;
+    const birthday_data = try allocator.alloc(i32, 3);
+    birthday_data[0] = 1999;
+    birthday_data[1] = 11;
+    birthday_data[2] = 11;
+
+    const user = User{ .id = 136, .birthday = birthday_data };
+
+    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    defer Euser.deinit(allocator);
+
+    var file = try std.fs.cwd().createFile("test_element", .{});
+    defer file.close();
+
+    var buff: [1024]u8 = undefined;
+    var writer = file.writer(&buff);
+    try Euser.save(&writer);
+
+    // Load
+    var loadFile = try std.fs.cwd().openFile("test_element", .{});
+
+    var buff2: [1024]u8 = undefined;
+    var reader = loadFile.reader(&buff2);
+
+    var loaded = Element{
+        .tname = @typeName(User),
+        .field = std.StringHashMap(FieldType).init(allocator),
+        .scheme = std.ArrayList([]const u8){},
+    };
+    defer loaded.deinit(allocator);
+
+    try loaded.load(allocator, &reader);
+
+    const loaded_birthday = loaded.getAs([]const i32, "birthday").?;
+    try std.testing.expectEqualSlices(i32, birthday_data, loaded_birthday);
 }
