@@ -38,7 +38,16 @@ pub fn DB() type {
                 }
             }
 
-            const table = Table.Table.init(@typeName(T), db.allocator);
+            var scheme = std.ArrayList([]const u8){};
+            const info = @typeInfo(T);
+
+            inline for (info.@"struct".fields) |field| {
+                const fname = field.name;
+
+                try scheme.append(db.allocator, fname);
+            }
+
+            const table = Table.Table.init(@typeName(T), db.allocator, scheme);
 
             if (!db.tables.contains(name)) {
                 try db.tables.put(name, table);
@@ -82,6 +91,11 @@ pub fn DB() type {
                 try w.writeInt(u32, @intCast(v.tname.len), .little);
                 try w.writeAll(v.tname);
                 try w.writeInt(usize, @intCast(v.rows.items.len), .little);
+                try w.writeInt(usize, v.mainScheme.items.len, .little);
+                for (v.mainScheme.items) |i| {
+                    try w.writeInt(usize, i.len, .little);
+                    try w.writeAll(i);
+                }
             }
 
             try w.flush();
@@ -172,7 +186,16 @@ pub fn DB() type {
 
                 const count_row = try r.takeInt(usize, .little);
 
-                var table = Table.Table.init(tname, db.allocator);
+                var scheme = std.ArrayList([]const u8){};
+
+                const schemeLen = try r.takeInt(usize, .little);
+                for (0..schemeLen) |_| {
+                    const fieldNameLen = try r.takeInt(usize, .little);
+                    const fieldName = try r.take(fieldNameLen);
+                    try scheme.append(db.allocator, fieldName);
+                }
+
+                var table = Table.Table.init(tname, db.allocator, scheme);
 
                 const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
                 defer db.allocator.free(tdir_name);
@@ -194,14 +217,15 @@ pub fn DB() type {
 
                 var treader = tfile.reader(tbuff[0..]);
 
-                var elements = try db.allocator.alloc(Element, count_row);
+                var elements = try db.allocator.alloc(*Element, count_row);
                 defer db.allocator.free(elements);
 
                 for (0..count_row) |i| {
-                    var element = Element{
+                    var element = try db.allocator.create(Element);
+                    element.* = Element{
                         .field = std.StringHashMap(Types.FieldType).init(db.allocator),
                         .tname = tname,
-                        .scheme = std.ArrayList([]const u8){},
+                        .scheme = &table.mainScheme,
                     };
 
                     try element.load(db.allocator, &treader);
@@ -288,12 +312,10 @@ test "Save DB" {
     const user = Users{ .id = 0, .name = "Jon" };
     const user2 = Users{ .id = 0, .name = "Len" };
 
-    const Euser = try Adapter.toElement(user, allocator);
-    const Euser2 = try Adapter.toElement(user2, allocator);
+    var Euser = try Adapter.toElement(user, allocator);
+    var Euser2 = try Adapter.toElement(user2, allocator);
 
-    try Tuser.append(Euser);
-    try Tuser.append(Euser2);
-
+    try Tuser.appendMany(&.{ &Euser, &Euser2 });
     try db.save();
 }
 

@@ -29,7 +29,7 @@ pub const FieldType = union(enum) {
 pub const Element = struct {
     tname: []const u8,
     field: std.StringHashMap(FieldType),
-    scheme: std.ArrayList([]const u8),
+    scheme: *std.ArrayList([]const u8),
 
     pub fn get(self: @This(), key: []const u8) ?FieldType {
         return self.field.get(key) orelse null;
@@ -305,7 +305,6 @@ pub const Element = struct {
 
             const stored_key: []const u8 = ks;
 
-            try self.scheme.append(allocator, stored_key);
             const type_b = try r.take(1);
 
             switch (type_b[0]) {
@@ -506,7 +505,6 @@ pub const Element = struct {
         }
 
         self.field.deinit();
-        self.scheme.deinit(allocator);
     }
 };
 

@@ -6,26 +6,30 @@ pub const Table = struct {
     allocator: std.mem.Allocator,
     tname: []const u8,
     data_buffer: ?[]u8 = null,
+    mainScheme: std.ArrayList([]const u8),
 
     pub fn init(
         tname: []const u8,
         allocator: std.mem.Allocator,
+        scheme: std.ArrayList([]const u8),
     ) Table {
         return .{
             .rows = std.ArrayList(Types.Element){},
             .allocator = allocator,
             .tname = tname,
+            .mainScheme = scheme,
         };
     }
 
-    pub fn append(self: *Table, item: Types.Element) !void {
+    pub fn append(self: *Table, item: *Types.Element) !void {
         if (!std.mem.eql(u8, item.tname, self.tname)) {
             return error.InvalidType;
         }
-        try self.rows.append(self.allocator, item);
+        item.*.scheme = &self.mainScheme;
+        try self.rows.append(self.allocator, item.*);
     }
 
-    pub fn appendMany(self: *Table, items: []const Types.Element) !void {
+    pub fn appendMany(self: *Table, items: []const *Types.Element) !void {
         const n = items.len;
 
         try self.rows.ensureUnusedCapacity(self.allocator, n);
@@ -34,7 +38,8 @@ pub const Table = struct {
             if (!std.mem.eql(u8, item.tname, self.tname)) {
                 return error.InvalidType;
             }
-            self.rows.appendAssumeCapacity(item);
+            item.*.scheme = &self.mainScheme;
+            self.rows.appendAssumeCapacity(item.*);
         }
     }
 
@@ -74,6 +79,7 @@ pub const Table = struct {
         for (self.rows.items) |*element| {
             element.deinit(self.allocator);
         }
+        self.mainScheme.deinit(self.allocator);
         self.rows.deinit(self.allocator);
 
         if (self.data_buffer) |b| self.allocator.free(b);
@@ -90,14 +96,22 @@ test "Add row" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(@typeName(User), allocator);
+    var scheme = std.ArrayList([]const u8){};
+    try scheme.append(allocator, "id");
+    try scheme.append(allocator, "name");
+
+    var tb = Table.init(
+        @typeName(User),
+        allocator,
+        scheme,
+    );
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(Euser);
+    try tb.append(&Euser);
 }
 
 test "Get index row" {
@@ -110,14 +124,22 @@ test "Get index row" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(@typeName(User), allocator);
+    var scheme = std.ArrayList([]const u8){};
+    try scheme.append(allocator, "id");
+    try scheme.append(allocator, "name");
+
+    var tb = Table.init(
+        @typeName(User),
+        allocator,
+        scheme,
+    );
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(Euser);
+    try tb.append(&Euser);
 
     const get = tb.get(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
@@ -133,14 +155,22 @@ test "Get Mut index row" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(@typeName(User), allocator);
+    var scheme = std.ArrayList([]const u8){};
+    try scheme.append(allocator, "id");
+    try scheme.append(allocator, "name");
+
+    var tb = Table.init(
+        @typeName(User),
+        allocator,
+        scheme,
+    );
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "JDH" };
 
-    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(Euser);
+    try tb.append(&Euser);
 
     const get = tb.getMut(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
@@ -156,14 +186,22 @@ test "Clear Table" {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var tb = Table.init(@typeName(User), allocator);
+    var scheme = std.ArrayList([]const u8){};
+    try scheme.append(allocator, "id");
+    try scheme.append(allocator, "name");
+
+    var tb = Table.init(
+        @typeName(User),
+        allocator,
+        scheme,
+    );
     defer tb.deinit();
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(Euser);
+    try tb.append(&Euser);
 
     tb.clear();
 }

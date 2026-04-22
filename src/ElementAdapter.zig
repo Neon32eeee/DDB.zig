@@ -20,8 +20,6 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         const name = field.name;
         const value = @field(a, name);
 
-        try scheme.append(allocator, name);
-
         const putedData = switch (field.type) {
             i8 => Types.FieldType{ .int8 = value },
             i16 => Types.FieldType{ .int16 = value },
@@ -50,7 +48,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         try fields.put(name, putedData);
     }
 
-    return Types.Element{ .tname = tname, .field = fields, .scheme = scheme };
+    return Types.Element{ .tname = tname, .field = fields, .scheme = &scheme };
 }
 
 test "to element" {
