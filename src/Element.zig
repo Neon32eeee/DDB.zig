@@ -490,7 +490,6 @@ pub const Element = struct {
                         .i16 => |slice| allocator.free(slice),
                         .i32 => |slice| allocator.free(slice),
                         .i64 => |slice| allocator.free(slice),
-                        .u8 => |slice| allocator.free(slice),
                         .u16 => |slice| allocator.free(slice),
                         .u32 => |slice| allocator.free(slice),
                         .u64 => |slice| allocator.free(slice),
