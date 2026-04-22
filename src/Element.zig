@@ -17,7 +17,6 @@ pub const FieldType = union(enum) {
         i16: []const i16,
         i32: []const i32,
         i64: []const i64,
-        u8: []const u8,
         u16: []const u16,
         u32: []const u32,
         u64: []const u64,
@@ -48,7 +47,7 @@ pub const Element = struct {
             inline .int8, .int16, .int32, .int64, .uint8, .uint16, .uint32, .uint64, .str, .bool, .float => |payload| if (@TypeOf(payload) == T) payload else null,
 
             .array => |arr| switch (arr) {
-                inline .i8, .i16, .i32, .i64, .u8, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
+                inline .i8, .i16, .i32, .i64, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
             },
         };
     }
@@ -59,7 +58,7 @@ pub const Element = struct {
             inline .int8, .int16, .int32, .int64, .uint8, .uint16, .uint32, .uint64, .str, .bool, .float => |payload| if (@TypeOf(payload) == T) payload else null,
 
             .array => |arr| switch (arr) {
-                inline .i8, .i16, .i32, .i64, .u8, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
+                inline .i8, .i16, .i32, .i64, .u16, .u32, .u64, .str, .bool, .f64 => |slice| if (@TypeOf(slice) == T) slice else null,
             },
         };
     }
@@ -224,32 +223,28 @@ pub const Element = struct {
                             try w.writeByte(3);
                             try writeArray(i64, w, arr.i64);
                         },
-                        .u8 => {
-                            try w.writeByte(4);
-                            try writeArray(u8, w, arr.u8);
-                        },
                         .u16 => {
-                            try w.writeByte(5);
+                            try w.writeByte(4);
                             try writeArray(u16, w, arr.u16);
                         },
                         .u32 => {
-                            try w.writeByte(6);
+                            try w.writeByte(5);
                             try writeArray(u32, w, arr.u32);
                         },
                         .u64 => {
-                            try w.writeByte(7);
+                            try w.writeByte(6);
                             try writeArray(u64, w, arr.u64);
                         },
                         .str => {
-                            try w.writeByte(8);
+                            try w.writeByte(7);
                             try writeStrArray(w, arr.str);
                         },
                         .bool => {
-                            try w.writeByte(9);
+                            try w.writeByte(8);
                             try writeBoolArray(w, arr.bool);
                         },
                         .f64 => {
-                            try w.writeByte(10);
+                            try w.writeByte(9);
                             try writeFloatArray(w, arr.f64);
                         },
                     }
@@ -398,36 +393,33 @@ pub const Element = struct {
                             try self.field.put(stored_key, .{ .array = .{ .i64 = v } });
                         },
                         4 => {
-                            const v = try loadArray(u8, r, len, allocator);
-                            try self.field.put(stored_key, .{ .array = .{ .u8 = v } });
-                        },
-                        5 => {
                             const v = try loadArray(u16, r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .u16 = v } });
                         },
-                        6 => {
+                        5 => {
                             const v = try loadArray(u32, r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .u32 = v } });
                         },
-                        7 => {
+                        6 => {
                             const v = try loadArray(u64, r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .u64 = v } });
                         },
-                        8 => {
+                        7 => {
                             const v = try loadStrArray(r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .str = v } });
                         },
-                        9 => {
+                        8 => {
                             const v = try loadBoolArray(r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .bool = v } });
                         },
-                        10 => {
+                        9 => {
                             const v = try loadFloatArray(r, len, allocator);
                             try self.field.put(stored_key, .{ .array = .{ .f64 = v } });
                         },
                         else => return error.InvalidFormat,
                     }
                 },
+
                 else => return error.InvalidFormat,
             }
 
