@@ -71,7 +71,10 @@ pub fn DB() type {
         }
 
         pub fn save(db: @This()) !void {
-            var file = try std.fs.cwd().createFile(db.path, .{});
+            const ftmpname = try std.mem.concat(db.allocator, u8, &.{ db.path, ".tmp" });
+            defer db.allocator.free(ftmpname);
+
+            var file = try std.fs.cwd().createFile(ftmpname, .{});
             defer file.close();
 
             const buff = try db.allocator.alloc(u8, 128);
@@ -99,6 +102,8 @@ pub fn DB() type {
             }
 
             try w.flush();
+
+            try std.fs.cwd().rename(ftmpname, db.path);
 
             const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
             defer db.allocator.free(tdir_name);
@@ -136,6 +141,9 @@ pub fn DB() type {
             table_name: []const u8,
             rows: []const Element,
         ) void {
+            const tmpname = std.mem.concat(allocator, u8, &.{ table_name, ".tmp" }) catch return;
+            defer allocator.free(tmpname);
+
             var tdir = std.fs.cwd().openDir(tdir_name, .{}) catch return;
             defer tdir.close();
 
@@ -153,6 +161,8 @@ pub fn DB() type {
             }
 
             tw.flush() catch {};
+
+            std.fs.cwd().rename(tmpname, table_name) catch return;
         }
 
         pub fn load(db: *@This()) !void {

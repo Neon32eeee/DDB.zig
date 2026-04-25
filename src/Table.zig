@@ -39,7 +39,6 @@ pub const Table = struct {
             if (!std.mem.eql(u8, item.tname, self.tname)) {
                 return error.InvalidType;
             }
-            item.*.scheme.deinit(self.allocator);
             item.*.scheme = &self.mainScheme;
             self.rows.appendAssumeCapacity(item.*);
         }
