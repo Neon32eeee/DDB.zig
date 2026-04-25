@@ -100,9 +100,9 @@ pub fn DB() type {
                     try w.writeAll(i);
                 }
             }
-
             try w.flush();
 
+            try file.sync();
             try std.fs.cwd().rename(ftmpname, db.path);
 
             const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
@@ -162,6 +162,7 @@ pub fn DB() type {
 
             tw.flush() catch {};
 
+            table_file.sync() catch return;
             std.fs.cwd().rename(tmpname, table_name) catch return;
         }
 
