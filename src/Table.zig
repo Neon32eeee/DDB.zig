@@ -21,16 +21,16 @@ pub const Table = struct {
         };
     }
 
-    pub fn append(self: *Table, item: *Types.Element) !void {
+    pub fn append(self: *Table, item: Types.Element) !void {
         if (!std.mem.eql(u8, item.tname, self.tname)) {
             return error.InvalidType;
         }
-        item.*.scheme.deinit(self.allocator);
-        item.*.scheme = &self.mainScheme;
-        try self.rows.append(self.allocator, item.*);
+        var e = item.clone();
+        e.scheme = &self.mainScheme;
+        try self.rows.append(self.allocator, e);
     }
 
-    pub fn appendMany(self: *Table, items: []const *Types.Element) !void {
+    pub fn appendMany(self: *Table, items: []const Types.Element) !void {
         const n = items.len;
 
         try self.rows.ensureUnusedCapacity(self.allocator, n);
@@ -39,8 +39,9 @@ pub const Table = struct {
             if (!std.mem.eql(u8, item.tname, self.tname)) {
                 return error.InvalidType;
             }
-            item.*.scheme = &self.mainScheme;
-            self.rows.appendAssumeCapacity(item.*);
+            var e = item.clone();
+            e.scheme = &self.mainScheme;
+            self.rows.appendAssumeCapacity(e);
         }
     }
 
@@ -73,7 +74,7 @@ pub const Table = struct {
         for (self.rows.items) |*e| {
             e.deinit(self.allocator);
         }
-        self.rows.clearAndFree(self.allocator);
+        self.rows.clearRetainingCapacity();
     }
 
     pub fn deinit(self: *@This()) void {

@@ -494,10 +494,7 @@ pub const Element = struct {
                         .u64 => |slice| allocator.free(slice),
                         .bool => |slice| allocator.free(slice),
                         .f64 => |slice| allocator.free(slice),
-                        .str => |slice| {
-                            for (slice) |s| allocator.free(s);
-                            allocator.free(slice);
-                        },
+                        .str => |slice| allocator.free(slice),
                     }
                 },
                 else => {},

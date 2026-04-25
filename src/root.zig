@@ -228,12 +228,11 @@ pub fn DB() type {
 
                 var treader = tfile.reader(tbuff[0..]);
 
-                var elements = try db.allocator.alloc(*Element, count_row);
+                var elements = try db.allocator.alloc(Element, count_row);
                 defer db.allocator.free(elements);
 
                 for (0..count_row) |i| {
-                    var element = try db.allocator.create(Element);
-                    element.* = Element{
+                    var element = Element{
                         .field = std.StringHashMap(Types.FieldType).init(db.allocator),
                         .tname = tname,
                         .scheme = &table.mainScheme,
@@ -323,10 +322,10 @@ test "Save DB" {
     const user = Users{ .id = 0, .name = "Jon" };
     const user2 = Users{ .id = 0, .name = "Len" };
 
-    var Euser = try Adapter.toElement(user, allocator);
-    var Euser2 = try Adapter.toElement(user2, allocator);
+    const Euser = try Adapter.toElement(user, allocator);
+    const Euser2 = try Adapter.toElement(user2, allocator);
 
-    try Tuser.appendMany(&.{ &Euser, &Euser2 });
+    try Tuser.appendMany(&.{ Euser, Euser2 });
     try db.save();
 }
 
