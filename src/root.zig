@@ -37,6 +37,7 @@ pub fn DB() type {
                     @compileError("Invalid type");
                 }
             }
+            if (db.tables.contains(name)) return;
 
             var scheme = std.ArrayList([]const u8){};
             const info = @typeInfo(T);
@@ -49,9 +50,7 @@ pub fn DB() type {
 
             const table = Table.Table.init(@typeName(T), db.allocator, scheme);
 
-            if (!db.tables.contains(name)) {
-                try db.tables.put(name, table);
-            }
+            try db.tables.put(name, table);
         }
 
         pub fn dropTable(db: *@This(), name: []const u8) !void {
