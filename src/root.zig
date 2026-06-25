@@ -109,12 +109,6 @@ pub fn DB() type {
 
             var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
             defer tdir.close();
-            var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
-            defer tdir.close();
-            var tfile = tdir.openFile(k, .{}) catch |err| {
-                if (err == error.FileNotFound) continue;
-                return err; // <-- ЗДЕСЬ `scheme` не освобождается
-            };
 
             const n_threads = std.Thread.getCpuCount() catch 4;
             var pool: std.Thread.Pool = undefined;
