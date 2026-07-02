@@ -30,6 +30,7 @@ pub const Element = struct {
     tname: []const u8,
     field: std.StringHashMap(FieldType),
     scheme: *std.ArrayList([]const u8),
+    allocator: std.mem.Allocator,
 
     pub fn get(self: @This(), key: []const u8) ?FieldType {
         return self.field.get(key) orelse null;
@@ -63,15 +64,61 @@ pub const Element = struct {
         };
     }
 
+    fn cloneFieldType(ft: FieldType, allocator: std.mem.Allocator) !FieldType {
+        return switch (ft) {
+            .str => |s| .{ .str = try allocator.dupe(u8, s) },
+            .array => |arr| switch (arr) {
+                .i8 => |slice| .{ .array = .{ .i8 = try allocator.dupe(i8, slice) } },
+                .i16 => |slice| .{ .array = .{ .i16 = try allocator.dupe(i16, slice) } },
+                .i32 => |slice| .{ .array = .{ .i32 = try allocator.dupe(i32, slice) } },
+                .i64 => |slice| .{ .array = .{ .i64 = try allocator.dupe(i64, slice) } },
+                .u16 => |slice| .{ .array = .{ .u16 = try allocator.dupe(u16, slice) } },
+                .u32 => |slice| .{ .array = .{ .u32 = try allocator.dupe(u32, slice) } },
+                .u64 => |slice| .{ .array = .{ .u64 = try allocator.dupe(u64, slice) } },
+                .str => |slice| .{ .array = .{ .str = try allocator.dupe([]const u8, slice) } },
+                .bool => |slice| .{ .array = .{ .bool = try allocator.dupe(bool, slice) } },
+                .f64 => |slice| .{ .array = .{ .f64 = try allocator.dupe(f64, slice) } },
+            },
+            .int8, .int16, .int32, .int64, .uint8, .uint16, .uint32, .uint64, .bool, .float => ft,
+        };
+    }
+
+    fn deinitFieldType(ft: FieldType, allocator: std.mem.Allocator) void {
+        switch (ft) {
+            .str => |s| allocator.free(s),
+            .array => |arr| switch (arr) {
+                .i8 => |slice| allocator.free(slice),
+                .i16 => |slice| allocator.free(slice),
+                .i32 => |slice| allocator.free(slice),
+                .i64 => |slice| allocator.free(slice),
+                .u16 => |slice| allocator.free(slice),
+                .u32 => |slice| allocator.free(slice),
+                .u64 => |slice| allocator.free(slice),
+                .str => |slice| {
+                    for (slice) |item| allocator.free(item);
+                    allocator.free(slice);
+                },
+                .bool => |slice| allocator.free(slice),
+                .f64 => |slice| allocator.free(slice),
+            },
+            else => {},
+        }
+    }
+
     pub fn set(self: *@This(), key: []const u8, value: FieldType) !void {
         if (!self.field.contains(key)) return error.NotFindField;
-        try self.field.put(key, value);
+
+        const cloned = try cloneFieldType(value, self.allocator);
+        errdefer deinitFieldType(cloned, self.allocator);
     }
 
     pub fn setIndex(self: *@This(), index: usize, value: FieldType) !void {
         if (index >= self.keysLen()) return error.InvalidIndex;
-        if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
-        try self.field.put(self.scheme.items[index], value);
+        const key = self.scheme.items[index];
+        if (!self.field.contains(key)) return error.NotFindField;
+
+        const cloned = try cloneFieldType(value, self.allocator);
+        errdefer deinitFieldType(cloned, self.allocator);
     }
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
@@ -86,20 +133,21 @@ pub const Element = struct {
             u16 => .{ .uint16 = value },
             u32 => .{ .uint32 = value },
             u64 => .{ .uint64 = value },
-            []const u8 => .{ .str = value },
+            []const u8 => .{ .str = try self.allocator.dupe(u8, value) },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
 
-            []const i8 => .{ .array = .{ .i8 = value } },
-            []const i16 => .{ .array = .{ .i16 = value } },
-            []const i32 => .{ .array = .{ .i32 = value } },
-            []const i64 => .{ .array = .{ .i64 = value } },
-            []const u16 => .{ .array = .{ .u16 = value } },
-            []const u32 => .{ .array = .{ .u32 = value } },
-            []const u64 => .{ .array = .{ .u64 = value } },
-            []const []const u8 => .{ .array = .{ .str = value } },
-            []const bool => .{ .array = .{ .bool = value } },
-            []const f64 => .{ .array = .{ .f64 = value } },
+            []const i8 => .{ .array = .{ .i8 = try self.allocator.dupe(i8, value) } },
+            []const i16 => .{ .array = .{ .i16 = try self.allocator.dupe(i16, value) } },
+            []const i32 => .{ .array = .{ .i32 = try self.allocator.dupe(i32, value) } },
+            []const i64 => .{ .array = .{ .i64 = try self.allocator.dupe(i64, value) } },
+            []const u8 => .{ .array = .{ .u8 = try self.allocator.dupe(u8, value) } }, // добавлено
+            []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
+            []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
+            []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
+            []const []const u8 => .{ .array = .{ .str = try self.allocator.dupe([]const u8, value) } },
+            []const bool => .{ .array = .{ .bool = try self.allocator.dupe(bool, value) } },
+            []const f64 => .{ .array = .{ .f64 = try self.allocator.dupe(f64, value) } },
 
             else => return error.UnsupportedType,
         };
@@ -109,7 +157,9 @@ pub const Element = struct {
 
     pub fn setIndexAs(self: *@This(), comptime T: type, index: usize, value: T) !void {
         if (index >= self.keysLen()) return error.InvalidIndex;
-        if (!self.field.contains(self.scheme.items[index])) return error.NotFindField;
+        const key = self.scheme.items[index];
+        if (!self.field.contains(key)) return error.NotFindField;
+
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },
             i16 => .{ .int16 = value },
@@ -119,21 +169,21 @@ pub const Element = struct {
             u16 => .{ .uint16 = value },
             u32 => .{ .uint32 = value },
             u64 => .{ .uint64 = value },
-            []const u8 => .{ .str = value },
+            []const u8 => .{ .str = try self.allocator.dupe(u8, value) },
             bool => .{ .bool = value },
             f64 => .{ .float = value },
 
-            []const i8 => .{ .array = .{ .i8 = value } },
-            []const i16 => .{ .array = .{ .i16 = value } },
-            []const i32 => .{ .array = .{ .i32 = value } },
-            []const i64 => .{ .array = .{ .i64 = value } },
-            []const u8 => .{ .array = .{ .u8 = value } },
-            []const u16 => .{ .array = .{ .u16 = value } },
-            []const u32 => .{ .array = .{ .u32 = value } },
-            []const u64 => .{ .array = .{ .u64 = value } },
-            []const []const u8 => .{ .array = .{ .str = value } },
-            []const bool => .{ .array = .{ .bool = value } },
-            []const f64 => .{ .array = .{ .f64 = value } },
+            []const i8 => .{ .array = .{ .i8 = try self.allocator.dupe(i8, value) } },
+            []const i16 => .{ .array = .{ .i16 = try self.allocator.dupe(i16, value) } },
+            []const i32 => .{ .array = .{ .i32 = try self.allocator.dupe(i32, value) } },
+            []const i64 => .{ .array = .{ .i64 = try self.allocator.dupe(i64, value) } },
+            []const u8 => .{ .array = .{ .u8 = try self.allocator.dupe(u8, value) } },
+            []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
+            []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
+            []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
+            []const []const u8 => .{ .array = .{ .str = try self.allocator.dupe([]const u8, value) } },
+            []const bool => .{ .array = .{ .bool = try self.allocator.dupe(bool, value) } },
+            []const f64 => .{ .array = .{ .f64 = try self.allocator.dupe(f64, value) } },
 
             else => return error.UnsupportedType,
         };
@@ -318,7 +368,7 @@ pub const Element = struct {
                     const str_len = try r.takeInt(u32, .little);
                     const str_slice = try r.take(@intCast(str_len));
 
-                    const stored_str: []const u8 = str_slice;
+                    const stored_str: []const u8 = try allocator.dupe(u8, str_slice);
 
                     try self.field.put(stored_key, .{ .str = stored_str });
                 },
@@ -476,29 +526,15 @@ pub const Element = struct {
             .tname = self.tname,
             .field = self.field,
             .scheme = self.scheme,
+            .allocator = self.allocator,
         };
     }
 
-    pub fn deinit(self: *@This(), allocator: std.mem.Allocator) void {
+    pub fn deinit(self: *@This()) void {
+        const allocator = self.allocator;
         var it = self.field.iterator();
         while (it.next()) |entry| {
-            switch (entry.value_ptr.*) {
-                .array => |arr| {
-                    switch (arr) {
-                        .i8 => |slice| allocator.free(slice),
-                        .i16 => |slice| allocator.free(slice),
-                        .i32 => |slice| allocator.free(slice),
-                        .i64 => |slice| allocator.free(slice),
-                        .u16 => |slice| allocator.free(slice),
-                        .u32 => |slice| allocator.free(slice),
-                        .u64 => |slice| allocator.free(slice),
-                        .bool => |slice| allocator.free(slice),
-                        .f64 => |slice| allocator.free(slice),
-                        .str => |slice| allocator.free(slice),
-                    }
-                },
-                else => {},
-            }
+            deinitFieldType(entry.value_ptr.*, allocator);
         }
 
         self.field.deinit();

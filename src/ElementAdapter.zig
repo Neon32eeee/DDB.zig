@@ -20,7 +20,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
         const name = field.name;
         const value = @field(a, name);
 
-        const putedData = switch (field.type) {
+        const putedData: Types.FieldType = switch (field.type) {
             i8 => Types.FieldType{ .int8 = value },
             i16 => Types.FieldType{ .int16 = value },
             i32 => Types.FieldType{ .int32 = value },
@@ -29,26 +29,34 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
             u16 => Types.FieldType{ .uint16 = value },
             u32 => Types.FieldType{ .uint32 = value },
             u64 => Types.FieldType{ .uint64 = value },
-            []const u8 => Types.FieldType{ .str = value },
+            []const u8 => Types.FieldType{ .str = try allocator.dupe(u8, value) },
             bool => Types.FieldType{ .bool = value },
             f64 => Types.FieldType{ .float = value },
-            []const i8 => Types.FieldType{ .array = .{ .i8 = value } },
-            []const i16 => Types.FieldType{ .array = .{ .i16 = value } },
-            []const i32 => Types.FieldType{ .array = .{ .i32 = value } },
-            []const i64 => Types.FieldType{ .array = .{ .i64 = value } },
-            []const u16 => Types.FieldType{ .array = .{ .u16 = value } },
-            []const u32 => Types.FieldType{ .array = .{ .u32 = value } },
-            []const u64 => Types.FieldType{ .array = .{ .u64 = value } },
-            []const []const u8 => Types.FieldType{ .array = .{ .str = value } },
-            []const bool => Types.FieldType{ .array = .{ .bool = value } },
-            []const f64 => Types.FieldType{ .array = .{ .f64 = value } },
-            else => return error.InvalidType,
+            []const i8 => .{ .array = .{ .i8 = try allocator.dupe(i8, value) } },
+            []const i16 => .{ .array = .{ .i16 = try allocator.dupe(i16, value) } },
+            []const i32 => .{ .array = .{ .i32 = try allocator.dupe(i32, value) } },
+            []const i64 => .{ .array = .{ .i64 = try allocator.dupe(i64, value) } },
+            []const u16 => .{ .array = .{ .u16 = try allocator.dupe(u16, value) } },
+            []const u32 => .{ .array = .{ .u32 = try allocator.dupe(u32, value) } },
+            []const u64 => .{ .array = .{ .u64 = try allocator.dupe(u64, value) } },
+            []const []const u8 => .{ .array = .{ .str = try allocator.dupe([]const u8, value) } },
+            []const bool => .{ .array = .{ .bool = try allocator.dupe(bool, value) } },
+            []const f64 => .{ .array = .{ .f64 = try allocator.dupe(f64, value) } },
+            else => {
+                std.debug.print("TYPE ERROR: {any}\n", .{field.type});
+                return error.InvalidType;
+            },
         };
 
         try fields.put(name, putedData);
     }
 
-    return Types.Element{ .tname = tname, .field = fields, .scheme = &scheme };
+    return Types.Element{
+        .tname = tname,
+        .field = fields,
+        .scheme = &scheme,
+        .allocator = allocator,
+    };
 }
 
 test "to element" {

@@ -79,7 +79,7 @@ pub const Table = struct {
 
     pub fn deinit(self: *@This()) void {
         for (self.rows.items) |*element| {
-            element.deinit(self.allocator);
+            element.deinit();
         }
         self.mainScheme.deinit(self.allocator);
         self.rows.deinit(self.allocator);

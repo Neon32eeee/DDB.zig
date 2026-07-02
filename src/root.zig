@@ -236,6 +236,7 @@ pub fn DB() type {
                         .field = std.StringHashMap(Types.FieldType).init(db.allocator),
                         .tname = tname,
                         .scheme = &table.mainScheme,
+                        .allocator = db.allocator,
                     };
 
                     try element.load(db.allocator, &treader);
