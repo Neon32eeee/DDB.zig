@@ -112,7 +112,7 @@ pub const Element = struct {
         errdefer deinitFieldType(cloned, self.allocator);
     }
 
-    pub fn setIndex(self: *@This(), index: usize, value: FieldType) !void {
+    pub fn setIndex(self: *@This(), index: usize, value: FieldType) !FieldType {
         if (index >= self.keysLen()) return error.InvalidIndex;
         const key = self.scheme.items[index];
         if (!self.field.contains(key)) return error.NotFindField;
@@ -141,7 +141,6 @@ pub const Element = struct {
             []const i16 => .{ .array = .{ .i16 = try self.allocator.dupe(i16, value) } },
             []const i32 => .{ .array = .{ .i32 = try self.allocator.dupe(i32, value) } },
             []const i64 => .{ .array = .{ .i64 = try self.allocator.dupe(i64, value) } },
-            []const u8 => .{ .array = .{ .u8 = try self.allocator.dupe(u8, value) } }, // добавлено
             []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
             []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
             []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
@@ -194,7 +193,7 @@ pub const Element = struct {
         return self.scheme.items.len;
     }
 
-    pub fn save(self: @This(), writer: *std.fs.File.Writer) !void {
+    pub fn save(self: @This(), writer: *std.Io.File.Writer) !void {
         var w = &writer.interface;
 
         var iterator = self.field.iterator();
@@ -344,7 +343,7 @@ pub const Element = struct {
         }
     }
 
-    pub fn load(self: *@This(), allocator: std.mem.Allocator, reader: *std.fs.File.Reader) !void {
+    pub fn load(self: *@This(), allocator: std.mem.Allocator, reader: *std.Io.File.Reader) !void {
         var r = &reader.interface;
         while (true) {
             const kl = r.takeInt(u32, .little) catch |err| {
@@ -552,18 +551,19 @@ test "Element" {
     const allocator = std.testing.allocator;
 
     var e = try @import("ElementAdapter.zig").toElement(user, allocator);
-    defer e.deinit(allocator);
+    defer e.deinit();
 
     try e.setAs([]const u8, "name", "JDH");
 }
 
 test "Element save" {
-    var file = try std.fs.cwd().createFile("test_element", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().createFile(io, "test_element", .{});
+    defer file.close(io);
 
     var buff: [1024]u8 = undefined;
 
-    var writer = file.writer(&buff);
+    var writer = file.writer(io, &buff);
 
     const User = struct {
         id: i32,
@@ -575,18 +575,19 @@ test "Element save" {
     const allocator = std.testing.allocator;
 
     var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
-    defer Euser.deinit(allocator);
+    defer Euser.deinit();
 
     try Euser.save(&writer);
 }
 
 test "Element load" {
-    var file = try std.fs.cwd().openFile("test_element", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().openFile(io, "test_element", .{});
+    defer file.close(io);
 
     var buff: [1024]u8 = undefined;
 
-    var reader = file.reader(&buff);
+    var reader = file.reader(io, &buff);
 
     const User = struct {
         id: i32,
@@ -594,13 +595,15 @@ test "Element load" {
     };
 
     const allocator = std.testing.allocator;
+    var scheme = std.ArrayList([]const u8).empty;
 
     var Euser = Element{
         .tname = @typeName(User),
         .field = std.StringHashMap(FieldType).init(allocator),
-        .scheme = std.ArrayList([]const u8){},
+        .scheme = &scheme,
+        .allocator = allocator,
     };
-    defer Euser.deinit(allocator);
+    defer Euser.deinit();
 
     try Euser.load(
         allocator,
@@ -623,6 +626,7 @@ test "Element array" {
     // Save
     const allocator = std.testing.allocator;
     const birthday_data = try allocator.alloc(i32, 3);
+    defer allocator.free(birthday_data);
     birthday_data[0] = 1999;
     birthday_data[1] = 11;
     birthday_data[2] = 11;
@@ -630,27 +634,31 @@ test "Element array" {
     const user = User{ .id = 136, .birthday = birthday_data };
 
     var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
-    defer Euser.deinit(allocator);
+    defer Euser.deinit();
 
-    var file = try std.fs.cwd().createFile("test_element", .{});
-    defer file.close();
+    const io = std.testing.io;
+    var file = try std.Io.Dir.cwd().createFile(io, "test_element", .{});
+    defer file.close(io);
 
     var buff: [1024]u8 = undefined;
-    var writer = file.writer(&buff);
+    var writer = file.writer(io, &buff);
     try Euser.save(&writer);
 
     // Load
-    var loadFile = try std.fs.cwd().openFile("test_element", .{});
+    var loadFile = try std.Io.Dir.cwd().openFile(io, "test_element", .{});
 
     var buff2: [1024]u8 = undefined;
-    var reader = loadFile.reader(&buff2);
+    var reader = loadFile.reader(io, &buff2);
+
+    var scheme = std.ArrayList([]const u8).empty;
 
     var loaded = Element{
         .tname = @typeName(User),
         .field = std.StringHashMap(FieldType).init(allocator),
-        .scheme = std.ArrayList([]const u8){},
+        .scheme = &scheme,
+        .allocator = allocator,
     };
-    defer loaded.deinit(allocator);
+    defer loaded.deinit();
 
     try loaded.load(allocator, &reader);
 

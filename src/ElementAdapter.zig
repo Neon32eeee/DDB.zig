@@ -13,7 +13,7 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
     const tname = @typeName(T);
 
     var fields = std.StringHashMap(Types.FieldType).init(allocator);
-    var scheme = std.ArrayList([]const u8){};
+    var scheme = std.ArrayList([]const u8).empty;
     const info = @typeInfo(T);
 
     inline for (info.@"struct".fields) |field| {
@@ -67,12 +67,12 @@ test "to element" {
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     var Euser = try toElement(user, allocator);
-    defer Euser.deinit(allocator);
+    defer Euser.deinit();
 
     if (Euser.getAs(i32, "id") != 0) {
         return error.InvalidID;

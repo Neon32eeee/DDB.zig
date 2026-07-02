@@ -14,7 +14,7 @@ pub const Table = struct {
         scheme: std.ArrayList([]const u8),
     ) Table {
         return .{
-            .rows = std.ArrayList(Types.Element){},
+            .rows = std.ArrayList(Types.Element).empty,
             .allocator = allocator,
             .tname = tname,
             .mainScheme = scheme,
@@ -72,7 +72,7 @@ pub const Table = struct {
     pub fn clear(self: *@This()) void {
         if (self.len() == 0) return;
         for (self.rows.items) |*e| {
-            e.deinit(self.allocator);
+            e.deinit();
         }
         self.rows.clearRetainingCapacity();
     }
@@ -94,11 +94,11 @@ test "Add row" {
         name: []const u8,
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var scheme = std.ArrayList([]const u8){};
+    var scheme = std.ArrayList([]const u8).empty;
     try scheme.append(allocator, "id");
     try scheme.append(allocator, "name");
 
@@ -111,9 +111,9 @@ test "Add row" {
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(&Euser);
+    try tb.append(Euser);
 }
 
 test "Get index row" {
@@ -122,11 +122,11 @@ test "Get index row" {
         name: []const u8,
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var scheme = std.ArrayList([]const u8){};
+    var scheme = std.ArrayList([]const u8).empty;
     try scheme.append(allocator, "id");
     try scheme.append(allocator, "name");
 
@@ -139,9 +139,9 @@ test "Get index row" {
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(&Euser);
+    try tb.append(Euser);
 
     const get = tb.get(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
@@ -153,11 +153,11 @@ test "Get Mut index row" {
         name: []const u8,
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var scheme = std.ArrayList([]const u8){};
+    var scheme = std.ArrayList([]const u8).empty;
     try scheme.append(allocator, "id");
     try scheme.append(allocator, "name");
 
@@ -170,9 +170,9 @@ test "Get Mut index row" {
 
     const user = User{ .id = 0, .name = "JDH" };
 
-    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(&Euser);
+    try tb.append(Euser);
 
     const get = tb.getMut(0) orelse unreachable;
     std.debug.print("\nid:{d}\nname:{s}\n", .{ get.getAs(i32, "id").?, get.getAs([]const u8, "name").? });
@@ -184,11 +184,11 @@ test "Clear Table" {
         name: []const u8,
     };
 
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var scheme = std.ArrayList([]const u8){};
+    var scheme = std.ArrayList([]const u8).empty;
     try scheme.append(allocator, "id");
     try scheme.append(allocator, "name");
 
@@ -201,9 +201,9 @@ test "Clear Table" {
 
     const user = User{ .id = 0, .name = "Jon" };
 
-    var Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
+    const Euser = try @import("ElementAdapter.zig").toElement(user, allocator);
 
-    try tb.append(&Euser);
+    try tb.append(Euser);
 
     tb.clear();
 }

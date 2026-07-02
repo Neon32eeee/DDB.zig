@@ -1,13 +1,15 @@
 const std = @import("std");
 const ddb = @import("ddb");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    const io = init.io;
+
     // init db
-    var db = try ddb.DB().init("save.db", allocator);
+    var db = try ddb.DB().init("save.db", allocator, io);
     defer db.deinit();
 
     const Users = struct {
@@ -20,7 +22,6 @@ pub fn main() !void {
 
     var increase: usize = 1;
     inline for (0..3) |_| {
-        table.clear();
         const n = 1000 * increase;
         increase += if (increase == 1) 9 else 90;
 
@@ -38,21 +39,19 @@ pub fn main() !void {
 
         try table.appendMany(elements);
 
-        const start = std.time.nanoTimestamp();
+        const start = std.Io.Clock.awake.now(io);
 
         for (0..1000) |_| {
             try db.save();
         }
 
-        const end = std.time.nanoTimestamp();
-
-        const total_ns: i128 = end - start;
+        const total_ns = start.untilNow(io, .awake).toNanoseconds();
         const avg_ns: i128 = @divTrunc(total_ns, n);
 
         const total_sec: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_s)) / 1000;
         const avg_sec: f64 = @as(f64, @floatFromInt(avg_ns)) / @as(f64, @floatFromInt(std.time.ns_per_us)) / 1000;
 
-        const file_info = try std.fs.cwd().statFile("save.dbdir/users");
+        const file_info = try std.Io.Dir.cwd().statFile(io, "save.dbdir/users", .{});
 
         const size_bytes = file_info.size;
         const size_kb = @as(f64, @floatFromInt(size_bytes)) / 1024.0;
@@ -63,5 +62,7 @@ pub fn main() !void {
             "{d}k element save ops: {d:.3} s total, {d:.2} us per op\nTotal size file: {d:.2} Kb\n",
             .{ totsal_insert, total_sec, avg_sec, size_kb },
         );
+
+        table.clear();
     }
 }

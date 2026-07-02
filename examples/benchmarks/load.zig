@@ -1,13 +1,15 @@
 const std = @import("std");
 const ddb = @import("ddb");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
+    const io = init.io;
+
     // init db
-    var db = try ddb.DB().init("load.db", allocator);
+    var db = try ddb.DB().init("load.db", allocator, io);
     defer db.deinit();
 
     const Users = struct {
@@ -40,17 +42,15 @@ pub fn main() !void {
 
         try db.save();
 
-        const start = std.time.nanoTimestamp();
+        const start = std.Io.Clock.awake.now(io);
 
         for (0..1000) |_| {
-            var db_load = try ddb.DB().init("load.db", allocator);
+            var db_load = try ddb.DB().init("load.db", allocator, io);
             defer db_load.deinit();
             try db_load.load();
         }
 
-        const end = std.time.nanoTimestamp();
-
-        const total_ns: i128 = end - start;
+        const total_ns = start.untilNow(io, .awake).toNanoseconds();
         const total_f64: f64 = @floatFromInt(total_ns);
         const avg: f64 = total_f64 / 1000;
         const avg_ms: f64 = avg / @as(f64, @floatFromInt(std.time.ns_per_ms));

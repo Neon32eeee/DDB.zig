@@ -9,13 +9,15 @@ pub fn DB() type {
         path: []const u8,
         tables: std.StringHashMap(Table.Table),
         allocator: std.mem.Allocator,
+        io: std.Io,
         metadata_buffer: ?[]u8 = null,
 
-        pub fn init(name_file: []const u8, allocator: std.mem.Allocator) !@This() {
+        pub fn init(name_file: []const u8, allocator: std.mem.Allocator, io: std.Io) !@This() {
             return @This(){
                 .path = name_file,
                 .tables = std.StringHashMap(Table.Table).init(allocator),
                 .allocator = allocator,
+                .io = io,
             };
         }
 
@@ -39,7 +41,7 @@ pub fn DB() type {
             }
             if (db.tables.contains(name)) return;
 
-            var scheme = std.ArrayList([]const u8){};
+            var scheme = std.ArrayList([]const u8).empty;
             const info = @typeInfo(T);
 
             inline for (info.@"struct".fields) |field| {
@@ -73,13 +75,13 @@ pub fn DB() type {
             const ftmpname = try std.mem.concat(db.allocator, u8, &.{ db.path, ".tmp" });
             defer db.allocator.free(ftmpname);
 
-            var file = try std.fs.cwd().createFile(ftmpname, .{});
-            defer file.close();
+            var file = try std.Io.Dir.cwd().createFile(db.io, ftmpname, .{});
+            defer file.close(db.io);
 
             const buff = try db.allocator.alloc(u8, 128);
             defer db.allocator.free(buff);
 
-            var writer = file.writer(buff);
+            var writer = file.writer(db.io, buff);
             var w = &writer.interface;
 
             var it = db.tables.iterator();
@@ -101,21 +103,19 @@ pub fn DB() type {
             }
             try w.flush();
 
-            try file.sync();
-            try std.fs.cwd().rename(ftmpname, db.path);
+            try file.sync(db.io);
+            try std.Io.Dir.cwd().rename(ftmpname, std.Io.Dir.cwd(), db.path, db.io);
 
             const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
             defer db.allocator.free(tdir_name);
 
-            var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
-            defer tdir.close();
+            std.Io.Dir.cwd().createDir(db.io, tdir_name, .default_dir) catch |err| {
+                if (err != std.Io.Dir.CreateDirError.PathAlreadyExists) return err;
+            };
+            var tdir = try std.Io.Dir.cwd().openDir(db.io, tdir_name, .{});
+            defer tdir.close(db.io);
 
-            const n_threads = std.Thread.getCpuCount() catch 4;
-            var pool: std.Thread.Pool = undefined;
-            try pool.init(.{ .allocator = db.allocator, .n_jobs = @intCast(n_threads) });
-            defer pool.deinit();
-
-            var wg: std.Thread.WaitGroup = .{};
+            var group = std.Io.Group.init;
 
             it = db.tables.iterator();
 
@@ -123,15 +123,16 @@ pub fn DB() type {
                 const k = e.key_ptr.*;
                 const v = e.value_ptr;
 
-                pool.spawnWg(&wg, saveTableTask, .{
+                group.async(db.io, saveTableTask, .{
                     db.allocator,
                     tdir_name,
                     k,
                     v.rows.items,
+                    db.io,
                 });
             }
 
-            wg.wait();
+            try group.await(db.io);
         }
 
         fn saveTableTask(
@@ -139,20 +140,21 @@ pub fn DB() type {
             tdir_name: []const u8,
             table_name: []const u8,
             rows: []const Element,
+            io: std.Io,
         ) void {
             const tmpname = std.mem.concat(allocator, u8, &.{ table_name, ".tmp" }) catch return;
             defer allocator.free(tmpname);
 
-            var tdir = std.fs.cwd().openDir(tdir_name, .{}) catch return;
-            defer tdir.close();
+            var tdir = std.Io.Dir.cwd().openDir(io, tdir_name, .{}) catch return;
+            defer tdir.close(io);
 
-            var table_file = tdir.createFile(table_name, .{}) catch return;
-            defer table_file.close();
+            var table_file = tdir.createFile(io, tmpname, .{}) catch return;
+            defer table_file.close(io);
 
             const tbuff = allocator.alloc(u8, 128) catch return;
             defer allocator.free(tbuff);
 
-            var twriter = table_file.writer(tbuff);
+            var twriter = table_file.writer(io, tbuff);
             var tw = &twriter.interface;
 
             for (rows) |elem| {
@@ -161,24 +163,24 @@ pub fn DB() type {
 
             tw.flush() catch {};
 
-            table_file.sync() catch return;
-            std.fs.cwd().rename(tmpname, table_name) catch return;
+            table_file.sync(io) catch return;
+            tdir.rename(tmpname, tdir, table_name, io) catch return;
         }
 
         pub fn load(db: *@This()) !void {
-            var file = std.fs.cwd().openFile(db.path, .{}) catch |err| {
+            var file = std.Io.Dir.cwd().openFile(db.io, db.path, .{}) catch |err| {
                 if (err == error.FileNotFound) return;
                 return err;
             };
-            defer file.close();
+            defer file.close(db.io);
 
-            const stat = try file.stat();
+            const stat = try file.stat(db.io);
             const size = stat.size;
 
             const buff = try db.allocator.alloc(u8, @intCast(size));
             db.metadata_buffer = buff;
 
-            var reader = file.reader(buff);
+            var reader = file.reader(db.io, buff);
             var r = &reader.interface;
 
             while (true) {
@@ -196,7 +198,7 @@ pub fn DB() type {
 
                 const count_row = try r.takeInt(usize, .little);
 
-                var scheme = std.ArrayList([]const u8){};
+                var scheme = std.ArrayList([]const u8).empty;
                 errdefer scheme.deinit(db.allocator);
 
                 const schemeLen = try r.takeInt(usize, .little);
@@ -211,22 +213,25 @@ pub fn DB() type {
                 const tdir_name = try std.mem.concat(db.allocator, u8, &[_][]const u8{ db.path, "dir" });
                 defer db.allocator.free(tdir_name);
 
-                var tdir = try std.fs.cwd().makeOpenPath(tdir_name, .{});
-                defer tdir.close();
+                std.Io.Dir.cwd().createDir(db.io, tdir_name, .default_dir) catch |err| {
+                    if (err != std.Io.Dir.CreateDirError.PathAlreadyExists) return err;
+                };
+                var tdir = try std.Io.Dir.cwd().openDir(db.io, tdir_name, .{});
+                defer tdir.close(db.io);
 
-                var tfile = tdir.openFile(k, .{}) catch |err| {
+                var tfile = tdir.openFile(db.io, k, .{}) catch |err| {
                     if (err == error.FileNotFound) continue;
                     return err;
                 };
-                defer tfile.close();
+                defer tfile.close(db.io);
 
-                const tstat = try tfile.stat();
+                const tstat = try tfile.stat(db.io);
                 const tsize = tstat.size;
 
                 var tbuff = try db.allocator.alloc(u8, @intCast(tsize));
                 table.data_buffer = tbuff;
 
-                var treader = tfile.reader(tbuff[0..]);
+                var treader = tfile.reader(db.io, tbuff[0..]);
 
                 var elements = try db.allocator.alloc(Element, count_row);
                 defer db.allocator.free(elements);
@@ -254,13 +259,15 @@ pub fn DB() type {
 
 test "Init Db" {
     const alloc = std.heap.page_allocator;
-    var db = try DB().init("DB.db", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 }
 
 test "Create Table" {
     const alloc = std.heap.page_allocator;
-    var db = try DB().init("DB.db", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -273,7 +280,8 @@ test "Create Table" {
 
 test "Drop Table" {
     const alloc = std.heap.page_allocator;
-    var db = try DB().init("DB.db", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -287,7 +295,8 @@ test "Drop Table" {
 
 test "Get Table" {
     const alloc = std.testing.allocator;
-    var db = try DB().init("DB.db", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -306,7 +315,8 @@ test "Get Table" {
 
 test "Save DB" {
     const alloc = std.testing.allocator;
-    var db = try DB().init("DB", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     const allocator = std.testing.allocator;
@@ -332,7 +342,8 @@ test "Save DB" {
 
 test "Load DB" {
     const alloc = std.heap.page_allocator;
-    var db = try DB().init("DB", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     try db.load();
@@ -347,7 +358,8 @@ test "Load DB" {
 
 test "Iterator DB" {
     const alloc = std.testing.allocator;
-    var db = try DB().init("DB", alloc);
+    const io = std.testing.io;
+    var db = try DB().init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {

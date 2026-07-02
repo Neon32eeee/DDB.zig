@@ -1,12 +1,14 @@
 const std = @import("std");
 const ddb = @import("root.zig");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
+
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var db = try ddb.DB().init("DB", allocator);
+    var db = try ddb.DB().init("DB", allocator, io);
     defer db.deinit();
 
     const Player = struct {
@@ -41,4 +43,6 @@ pub fn main() !void {
     try Tmobs.appendMany(&.{ Em1, Em2 });
 
     try db.save();
+
+    std.debug.print("Ok\n", .{});
 }

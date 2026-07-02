@@ -1,12 +1,14 @@
 const std = @import("std");
 const ddb = @import("ddb");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var db = try ddb.DB().init("DB", allocator);
+    const io = init.io;
+
+    var db = try ddb.DB().init("DB.db", allocator, io);
     defer db.deinit();
 
     try db.load();
@@ -30,10 +32,13 @@ pub fn main() !void {
                 std.debug.print("{s}:", .{name});
                 const val = e.getIndex(i).?;
                 switch (val) {
-                    .int => |value| std.debug.print("{d} ", .{value}),
+                    .i32 => |value| std.debug.print("{d} ", .{value}),
                     .str => |value| std.debug.print("{s} ", .{value}),
                     .bool => |value| std.debug.print("bool: {s} ", .{(if (value) "true" else "false")}),
                     .float => |value| std.debug.print("float: {:.6} ", .{value}),
+                    else => {
+                        std.debug.print("Support coming soon ", .{});
+                    },
                 }
             }
             std.debug.print("\n", .{});

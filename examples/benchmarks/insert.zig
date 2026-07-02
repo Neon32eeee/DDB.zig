@@ -1,16 +1,16 @@
 const std = @import("std");
 const ddb = @import("ddb");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+pub fn main(init: std.process.Init) !void {
+    var gpa = std.heap.DebugAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // инициализация базы
-    var db = try ddb.DB().init("bench.db", allocator);
+    const io = init.io;
+
+    var db = try ddb.DB().init("bench.db", allocator, io);
     defer db.deinit();
 
-    // создаём таблицу users
     const Users = struct {
         id: i32,
         name: []const u8,
@@ -28,7 +28,7 @@ pub fn main() !void {
         var elements = try allocator.alloc(ddb.Element, n);
         defer allocator.free(elements);
 
-        const start = std.time.nanoTimestamp();
+        const start = std.Io.Clock.awake.now(io);
 
         for (0..1000) |_| {
             table.clear();
@@ -45,9 +45,7 @@ pub fn main() !void {
             try table.appendMany(elements);
         }
 
-        const end = std.time.nanoTimestamp();
-
-        const total_ns: i128 = end - start;
+        const total_ns = start.untilNow(io, .awake).toNanoseconds();
         const avg_ns: i128 = @divTrunc(total_ns, n);
 
         const total_ms: f64 = @as(f64, @floatFromInt(total_ns)) / @as(f64, @floatFromInt(std.time.ns_per_ms)) / 1000;
