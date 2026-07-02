@@ -108,14 +108,18 @@ pub const Element = struct {
     pub fn set(self: *@This(), key: []const u8, value: FieldType) !void {
         if (!self.field.contains(key)) return error.NotFindField;
 
+        deinitFieldType(self.field.get(key).?, self.allocator);
+
         const cloned = try cloneFieldType(value, self.allocator);
         errdefer deinitFieldType(cloned, self.allocator);
     }
 
-    pub fn setIndex(self: *@This(), index: usize, value: FieldType) !FieldType {
+    pub fn setIndex(self: *@This(), index: usize, value: FieldType) !void {
         if (index >= self.keysLen()) return error.InvalidIndex;
         const key = self.scheme.items[index];
         if (!self.field.contains(key)) return error.NotFindField;
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
 
         const cloned = try cloneFieldType(value, self.allocator);
         errdefer deinitFieldType(cloned, self.allocator);
@@ -123,6 +127,8 @@ pub const Element = struct {
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
 
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },
@@ -158,6 +164,8 @@ pub const Element = struct {
         if (index >= self.keysLen()) return error.InvalidIndex;
         const key = self.scheme.items[index];
         if (!self.field.contains(key)) return error.NotFindField;
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
 
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },

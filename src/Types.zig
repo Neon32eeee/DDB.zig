@@ -28,7 +28,7 @@ pub const TableIterator = struct {
 test "Next TableIterator" {
     const allocator = std.testing.allocator;
 
-    var list = std.ArrayList(Element){};
+    var list = std.ArrayList(Element).empty;
     defer list.deinit(allocator);
 
     const Player = struct {
@@ -42,8 +42,8 @@ test "Next TableIterator" {
 
     var Ep1 = try @import("ElementAdapter.zig").toElement(player1, allocator);
     var Ep2 = try @import("ElementAdapter.zig").toElement(player2, allocator);
-    defer Ep1.deinit(allocator);
-    defer Ep2.deinit(allocator);
+    defer Ep1.deinit();
+    defer Ep2.deinit();
 
     try list.append(allocator, Ep1);
     try list.append(allocator, Ep2);
