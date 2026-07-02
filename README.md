@@ -4,7 +4,7 @@
 DDB is a library providing a basic set of tools for managing a database.
 
 Requirements:
-- Zig version: `0.15.1`
+- Zig version: `0.16.0`
 - OS:
   - Linux
   - macOS
@@ -14,12 +14,14 @@ Example:
 const std = @import("std");
 const ddb = @import("ddb");
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var db = try ddb.DB().init("DB", allocator);
+    const io = init.io;
+
+    var db = try ddb.DB().init("DB", allocator, io);
     defer db.deinit();
 
     const Player = struct {
