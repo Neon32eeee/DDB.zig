@@ -39,7 +39,17 @@ pub fn toElement(a: anytype, allocator: std.mem.Allocator) !Types.Element {
             []const u16 => .{ .array = .{ .u16 = try allocator.dupe(u16, value) } },
             []const u32 => .{ .array = .{ .u32 = try allocator.dupe(u32, value) } },
             []const u64 => .{ .array = .{ .u64 = try allocator.dupe(u64, value) } },
-            []const []const u8 => .{ .array = .{ .str = try allocator.dupe([]const u8, value) } },
+            []const []const u8 => field: {
+                var strings = try allocator.alloc([]const u8, value.len);
+                errdefer {
+                    for (strings) |s| allocator.free(s);
+                    allocator.free(strings);
+                }
+                for (value, 0..) |str, i| {
+                    strings[i] = try allocator.dupe(u8, str);
+                }
+                break :field .{ .array = .{ .str = strings } };
+            },
             []const bool => .{ .array = .{ .bool = try allocator.dupe(bool, value) } },
             []const f64 => .{ .array = .{ .f64 = try allocator.dupe(f64, value) } },
             else => {

@@ -75,7 +75,17 @@ pub const Element = struct {
                 .u16 => |slice| .{ .array = .{ .u16 = try allocator.dupe(u16, slice) } },
                 .u32 => |slice| .{ .array = .{ .u32 = try allocator.dupe(u32, slice) } },
                 .u64 => |slice| .{ .array = .{ .u64 = try allocator.dupe(u64, slice) } },
-                .str => |slice| .{ .array = .{ .str = try allocator.dupe([]const u8, slice) } },
+                .str => |slice| {
+                    var strings = try allocator.alloc([]const u8, slice.len);
+                    errdefer {
+                        for (strings) |s| allocator.free(s);
+                        allocator.free(strings);
+                    }
+                    for (slice, 0..) |str, i| {
+                        strings[i] = try allocator.dupe(u8, str);
+                    }
+                    return .{ .array = .{ .str = strings } };
+                },
                 .bool => |slice| .{ .array = .{ .bool = try allocator.dupe(bool, slice) } },
                 .f64 => |slice| .{ .array = .{ .f64 = try allocator.dupe(f64, slice) } },
             },
@@ -111,6 +121,8 @@ pub const Element = struct {
         deinitFieldType(self.field.get(key).?, self.allocator);
 
         const cloned = try cloneFieldType(value, self.allocator);
+
+        try self.field.put(key, cloned);
         errdefer deinitFieldType(cloned, self.allocator);
     }
 
@@ -122,6 +134,8 @@ pub const Element = struct {
         deinitFieldType(self.field.get(key).?, self.allocator);
 
         const cloned = try cloneFieldType(value, self.allocator);
+
+        try self.field.put(key, cloned);
         errdefer deinitFieldType(cloned, self.allocator);
     }
 
@@ -150,7 +164,17 @@ pub const Element = struct {
             []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
             []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
             []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
-            []const []const u8 => .{ .array = .{ .str = try self.allocator.dupe([]const u8, value) } },
+            []const []const u8 => field: {
+                var strings = try self.allocator.alloc([]const u8, value.len);
+                errdefer {
+                    for (strings) |s| self.allocator.free(s);
+                    self.allocator.free(strings);
+                }
+                for (value, 0..) |str, i| {
+                    strings[i] = try self.allocator.dupe(u8, str);
+                }
+                break :field .{ .array = .{ .str = strings } };
+            },
             []const bool => .{ .array = .{ .bool = try self.allocator.dupe(bool, value) } },
             []const f64 => .{ .array = .{ .f64 = try self.allocator.dupe(f64, value) } },
 
@@ -188,7 +212,17 @@ pub const Element = struct {
             []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
             []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
             []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
-            []const []const u8 => .{ .array = .{ .str = try self.allocator.dupe([]const u8, value) } },
+            []const []const u8 => field: {
+                var strings = try self.allocator.alloc([]const u8, value.len);
+                errdefer {
+                    for (strings) |s| self.allocator.free(s);
+                    self.allocator.free(strings);
+                }
+                for (value, 0..) |str, i| {
+                    strings[i] = try self.allocator.dupe(u8, str);
+                }
+                break :field .{ .array = .{ .str = strings } };
+            },
             []const bool => .{ .array = .{ .bool = try self.allocator.dupe(bool, value) } },
             []const f64 => .{ .array = .{ .f64 = try self.allocator.dupe(f64, value) } },
 
@@ -501,7 +535,8 @@ pub const Element = struct {
         for (0..len) |i| {
             const l = try r.takeInt(u32, .little);
             const s = try r.take(@intCast(l));
-            val[i] = s;
+            const copy = try allocator.dupe(u8, s);
+            val[i] = copy;
         }
         return val;
     }
