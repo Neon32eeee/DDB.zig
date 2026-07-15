@@ -61,6 +61,10 @@ pub const Table = struct {
         return &self.rows.items[index];
     }
 
+    pub fn getItems(self: Table) []Types.Element {
+        return self.rows.items;
+    }
+
     pub fn iterator(self: *@This()) Types.TableIterator {
         return Types.TableIterator{ .data = &self.rows, .index = 0 };
     }
