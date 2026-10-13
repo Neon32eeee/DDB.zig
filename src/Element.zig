@@ -118,9 +118,9 @@ pub const Element = struct {
     pub fn set(self: *@This(), key: []const u8, value: FieldType) !void {
         if (!self.field.contains(key)) return error.NotFindField;
 
-        deinitFieldType(self.field.get(key).?, self.allocator);
-
         const cloned = try cloneFieldType(value, self.allocator);
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
 
         try self.field.put(key, cloned);
         errdefer deinitFieldType(cloned, self.allocator);
@@ -131,9 +131,9 @@ pub const Element = struct {
         const key = self.scheme.items[index];
         if (!self.field.contains(key)) return error.NotFindField;
 
-        deinitFieldType(self.field.get(key).?, self.allocator);
-
         const cloned = try cloneFieldType(value, self.allocator);
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
 
         try self.field.put(key, cloned);
         errdefer deinitFieldType(cloned, self.allocator);
@@ -141,8 +141,6 @@ pub const Element = struct {
 
     pub fn setAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
         if (!self.field.contains(key)) return error.NotFindField;
-
-        deinitFieldType(self.field.get(key).?, self.allocator);
 
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },
@@ -181,15 +179,16 @@ pub const Element = struct {
             else => return error.UnsupportedType,
         };
 
+        deinitFieldType(self.field.get(key).?, self.allocator);
+
         try self.field.put(key, ft);
+        errdefer deinitFieldType(ft, self.allocator);
     }
 
     pub fn setIndexAs(self: *@This(), comptime T: type, index: usize, value: T) !void {
         if (index >= self.keysLen()) return error.InvalidIndex;
         const key = self.scheme.items[index];
         if (!self.field.contains(key)) return error.NotFindField;
-
-        deinitFieldType(self.field.get(key).?, self.allocator);
 
         const ft: FieldType = switch (T) {
             i8 => .{ .int8 = value },
@@ -228,7 +227,65 @@ pub const Element = struct {
 
             else => return error.UnsupportedType,
         };
+
+        deinitFieldType(self.field.get(key).?, self.allocator);
+
         try self.field.put(self.scheme.items[index], ft);
+        errdefer deinitFieldType(self.field.get(key).?, self.allocator);
+    }
+
+    pub fn forceSet(self: *@This(), key: []const u8, value: FieldType) !void {
+        if (self.field.contains(key)) {
+            deinitFieldType(self.field.get(key).?, self.allocator);
+        }
+
+        const cloned = try cloneFieldType(value, self.allocator);
+        try self.field.put(key, cloned);
+        errdefer deinitFieldType(cloned, self.allocator);
+    }
+
+    pub fn forceSetAs(self: *@This(), comptime T: type, key: []const u8, value: T) !void {
+        if (self.field.contains(key)) {
+            deinitFieldType(self.field.get(key).?, self.allocator);
+        }
+
+        const ft: FieldType = switch (T) {
+            i8 => .{ .int8 = value },
+            i16 => .{ .int16 = value },
+            i32 => .{ .int32 = value },
+            i64 => .{ .int64 = value },
+            u8 => .{ .uint8 = value },
+            u16 => .{ .uint16 = value },
+            u32 => .{ .uint32 = value },
+            u64 => .{ .uint64 = value },
+            []const u8 => .{ .str = try self.allocator.dupe(u8, value) },
+            bool => .{ .bool = value },
+            f64 => .{ .float = value },
+
+            []const i8 => .{ .array = .{ .i8 = try self.allocator.dupe(i8, value) } },
+            []const i16 => .{ .array = .{ .i16 = try self.allocator.dupe(i16, value) } },
+            []const i32 => .{ .array = .{ .i32 = try self.allocator.dupe(i32, value) } },
+            []const i64 => .{ .array = .{ .i64 = try self.allocator.dupe(i64, value) } },
+            []const u16 => .{ .array = .{ .u16 = try self.allocator.dupe(u16, value) } },
+            []const u32 => .{ .array = .{ .u32 = try self.allocator.dupe(u32, value) } },
+            []const u64 => .{ .array = .{ .u64 = try self.allocator.dupe(u64, value) } },
+            []const []const u8 => field: {
+                var strings = try self.allocator.alloc([]const u8, value.len);
+                errdefer {
+                    for (strings) |s| self.allocator.free(s);
+                    self.allocator.free(strings);
+                }
+                for (value, 0..) |str, i| {
+                    strings[i] = try self.allocator.dupe(u8, str);
+                }
+                break :field .{ .array = .{ .str = strings } };
+            },
+            []const bool => .{ .array = .{ .bool = try self.allocator.dupe(bool, value) } },
+            []const f64 => .{ .array = .{ .f64 = try self.allocator.dupe(f64, value) } },
+
+            else => return error.UnsupportedType,
+        };
+        try self.field.put(key, ft);
     }
 
     pub fn keysLen(self: @This()) usize {
