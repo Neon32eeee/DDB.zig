@@ -9,7 +9,7 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
     // init db
-    var db = try ddb.DB().init("load.db", allocator, io);
+    var db = try ddb.DB.init("load.db", allocator, io);
     defer db.deinit();
 
     const Users = struct {
@@ -45,7 +45,7 @@ pub fn main(init: std.process.Init) !void {
         const start = std.Io.Clock.awake.now(io);
 
         for (0..1000) |_| {
-            var db_load = try ddb.DB().init("load.db", allocator, io);
+            var db_load = try ddb.DB.init("load.db", allocator, io);
             defer db_load.deinit();
             try db_load.load();
         }

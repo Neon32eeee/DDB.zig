@@ -9,7 +9,7 @@ pub fn main(init: std.process.Init) !void {
     const io = init.io;
 
     // init db
-    var db = try ddb.DB().init("save.db", allocator, io);
+    var db = try ddb.DB.init("save.db", allocator, io);
     defer db.deinit();
 
     const Users = struct {

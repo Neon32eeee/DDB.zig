@@ -258,14 +258,14 @@ pub const DB = struct {
 test "Init Db" {
     const alloc = std.heap.page_allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 }
 
 test "Create Table" {
     const alloc = std.heap.page_allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -279,7 +279,7 @@ test "Create Table" {
 test "Drop Table" {
     const alloc = std.heap.page_allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -294,7 +294,7 @@ test "Drop Table" {
 test "Get Table" {
     const alloc = std.testing.allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {
@@ -314,7 +314,7 @@ test "Get Table" {
 test "Save DB" {
     const alloc = std.testing.allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     const allocator = std.testing.allocator;
@@ -341,7 +341,7 @@ test "Save DB" {
 test "Load DB" {
     const alloc = std.heap.page_allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     try db.load();
@@ -357,7 +357,7 @@ test "Load DB" {
 test "Iterator DB" {
     const alloc = std.testing.allocator;
     const io = std.testing.io;
-    var db = try DB().init("DB.db", alloc, io);
+    var db = try DB.init("DB.db", alloc, io);
     defer db.deinit();
 
     const Users = struct {

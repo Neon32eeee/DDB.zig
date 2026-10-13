@@ -8,7 +8,7 @@ pub fn main(init: std.process.Init) !void {
 
     const io = init.io;
 
-    var db = try ddb.DB().init("bench.db", allocator, io);
+    var db = try ddb.DB.init("bench.db", allocator, io);
     defer db.deinit();
 
     const Users = struct {
