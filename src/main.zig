@@ -8,7 +8,7 @@ pub fn main(init: std.process.Init) !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    var db = try ddb.DB().init("DB", allocator, io);
+    var db = try ddb.DB.init("DB", allocator, io);
     defer db.deinit();
 
     const Player = struct {
