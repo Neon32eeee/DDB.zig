@@ -21,7 +21,7 @@ pub fn main(init: std.process.Init) !void {
 
     const io = init.io;
 
-    var db = try ddb.DB().init("DB", allocator, io);
+    var db = try ddb.DB.init("DB", allocator, io);
     defer db.deinit();
 
     const Player = struct {
